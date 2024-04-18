@@ -15,8 +15,33 @@ class Heuristic(metaclass=ABCMeta):
         self.novelty_sets = set()                             # We assume PDDL tuples
         self.w = 1
 
-        def atoms(grid, pos):
-            return
+        def atoms(state: 'State'):
+            """
+            Generates a set of atoms that represent the current state.
+
+            Args:
+            - state (State): The current state of the environment.
+
+            Returns:
+            - Set[Tuple[str, Tuple[int, int]]]: A set of tuples representing the state atoms.
+            """
+            atoms = set()
+
+            for index, (row, col) in enumerate(zip(state.agent_rows, state.agent_cols)):
+                atoms.add((f'AgentAt{index}', (row, col)))
+
+            
+            for row_index, row in enumerate(state.boxes):
+                for col_index, box in enumerate(row):
+                    if box:  
+                        atoms.add((f'BoxAt{box}', (row_index, col_index)))
+
+            for row_index, row in enumerate(state.goals):
+                 for col_index, goal in enumerate(row):
+                     if goal:
+                         atoms.add((f'GoalAt{goal}', (row_index, col_index)))
+
+            return atoms
 
         def get_neighbors(grid, pos):
             
