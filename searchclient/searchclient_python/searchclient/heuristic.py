@@ -14,6 +14,7 @@ class Heuristic(metaclass=ABCMeta):
         self.latest_state = initial_state
         self.novelty_sets = set()                             # We assume PDDL tuples
         self.w = 1
+
         def get_neighbors(grid, pos):
             
             neighbors = []
@@ -78,7 +79,7 @@ class Heuristic(metaclass=ABCMeta):
             else:
                 self.grids[goal_name] = get_path(self.wall_matrix, goal_pos)
    
-    # Manhattan
+    
     def atoms(self, state: 'State'):
             """
             Generates a set of atoms that represent the current state.
@@ -90,22 +91,24 @@ class Heuristic(metaclass=ABCMeta):
             - Set[Tuple[str, Tuple[int, int]]]: A set of tuples representing the state atoms.
             """
             atoms = set()
-
             for index, (row, col) in enumerate(zip(state.agent_rows, state.agent_cols)):
                 atoms.add((f'AgentAt{index}', (row, col)))
 
-            
-            for row_index, row in enumerate(state.boxes):
+            for (row_index, row) in enumerate(state.boxes):
                 for col_index, box in enumerate(row):
                     if box:  
                         atoms.add((f'BoxAt{box}', (row_index, col_index)))
 
-            for row_index, row in enumerate(state.goals):
-                 for col_index, goal in enumerate(row):
-                     if goal:
-                         atoms.add((f'GoalAt{goal}', (row_index, col_index)))
+            # Goals are rigids, we can exclude them
 
-            return atoms
+            # for row_index, row in enumerate(state.goals):
+            #     for col_index, goal in enumerate(row):
+            #         if goal:
+            #             atoms.add((f'GoalAt{goal}', (row_index, col_index)))
+
+            return frozenset(atoms)     # Need the frozenset so I can add the state representation to the novelty set
+    
+    # Manhattan
     def manhattan(self, agent, goal):
         return abs(agent[0] - goal[0]) + abs(agent[1] - goal[1])
 
@@ -113,21 +116,6 @@ class Heuristic(metaclass=ABCMeta):
         
         count = 0
         k = 1
-
-        # Goal count 
-
-        '''
-        #counts how many goal cells are not yet covered by an object of the right type
-        count = len(state.agent_rows)
-        for row in range(len(state.goals)):
-            for col in range(len(state.goals[row])):
-                goal = state.goals[row][col]
-                if '0' <= goal <= '9' and (state.agent_rows[ord(goal) - ord('0')] == row and state.agent_cols[ord(goal) - ord('0')] == col):
-                    count -= 1
-        # if(count < 3):
-        #     for row, col in zip(state.agent_rows, state.agent_cols):
-        #         print(row, col)
-        '''  
 
         ''' SAboxes '''           
 
@@ -177,17 +165,21 @@ class Heuristic(metaclass=ABCMeta):
         have the same heuristic values and both states have novelty
         measures greater than 1. 
         '''
+
         w = self.w
         
+        if len(frontier) < 1:
+            return w
+
         state_repr = self.atoms(state)
 
         heuristic_val = self.h(state)
-        filtered_seen_states = [seen_state for seen_state in frontier if self.h(seen_state) == heuristic_val]
+        filtered_seen_states = [seen_state[2] for seen_state in frontier if self.h(seen_state[2]) == heuristic_val]
         for seen_state in filtered_seen_states:
-            self.novelty_sets.append(self.atoms(seen_state))      # This should populate the set with a set for each seen state with the same h
-
-        for set in self.novelty_sets:
-            if state_repr - set:        # If one atom is novel
+            self.novelty_sets.add(self.atoms(seen_state))      # This should populate the set with a set for each seen state with the same h
+  
+        for novel_set in self.novelty_sets:
+            if state_repr - novel_set:        # If one atom is novel
                 w = 0
                 self.w = w
 
@@ -248,7 +240,7 @@ class HeuristicBFWS(Heuristic):
     '''
 
     def f(self, state: 'State') -> 'int':
-        return (self.w(state), self.h(state))
+        return (self.w, self.h(state))
     
     def __repr__(self):
         return 'BFWS evaluation'
