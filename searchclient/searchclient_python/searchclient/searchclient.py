@@ -11,8 +11,124 @@ from heuristic import HeuristicAStar, HeuristicWeightedAStar, HeuristicGreedy, H
 from graphsearch import search
 
 class SearchClient:
+
+    ''' We will use this function for multi-agent levels '''
+    @staticmethod
+    def parse_filtered_levels(server_messages) -> 'list': 
+        # We can assume that the level file is conforming to specification, since the server verifies this.
+        # Read domain.
+        server_messages.readline() # #domain
+        server_messages.readline() # hospital
+        
+        # Read Level name.
+        server_messages.readline() # #levelname
+        server_messages.readline() # <name>
+        
+        # Read colors.
+        server_messages.readline() # #colors
+        agent_colors = [None for _ in range(10)]
+        box_colors = [None for _ in range(26)]
+        line = server_messages.readline()
+        teams = []
+        while not line.startswith('#'):
+            split = line.split(':')
+            teams.append((split[0], split[1].strip()))
+            color = Color.from_string(split[0].strip())
+            entities = [e.strip() for e in split[1].split(',')]
+            for e in entities:
+                if '0' <= e <= '9':
+                    agent_colors[ord(e) - ord('0')] = color
+                elif 'A' <= e <= 'Z':
+                    box_colors[ord(e) - ord('A')] = color
+            line = server_messages.readline()
+
+        print(teams)            # example = [('red', '0, A'), ('green', '1, B')]
+
+        ''' Now we need to store the server messages in level_lines and goal_level_lines '''
+
+        initial_states = []
+
+        initial_line = server_messages.readline()
+        level_lines = []
+        line = initial_line
+        num_rows = 0
+        num_cols = 0
+
+        while not line.startswith('#'):
+            level_lines.append(line)
+            num_cols = max(num_cols, len(line))
+            num_rows += 1
+            line = server_messages.readline()
+
+        
+        intial_goal_line = server_messages.readline()
+        goal_level_lines = []
+        line = intial_goal_line
+        
+        while not line.startswith('#'):
+            goal_level_lines.append(line)
+            line = server_messages.readline()
+
+        ''' Loop and build a different level representation for each color '''
+
+        for team in teams:
+            # Read initial state.
+            # line is currently "#initial".
+            team_list = team[1].split(', ')
+            agents_in_team = [x for x in team_list if x.isdigit()]
+            boxes_in_team = [x for x in team_list if x.isalpha()]
+            num_agents = 0
+            agent_rows = [None for _ in range(10)]
+            agent_cols = [None for _ in range(10)]
+            walls = [[False for _ in range(num_cols)] for _ in range(num_rows)]
+            boxes = [['' for _ in range(num_cols)] for _ in range(num_rows)]
+            row = 0
+            for line in level_lines:
+                for col, c in enumerate(line):
+                    if c in agents_in_team:
+                        agent_rows[ord(c) - ord('0')] = row
+                        agent_cols[ord(c) - ord('0')] = col
+                        num_agents += 1
+                    elif c in boxes_in_team:
+                        boxes[row][col] = c
+                    elif c == '+':
+                        walls[row][col] = True
+                
+                row += 1
+            
+            # Strip from None values
+            agent_rows = [row for row in agent_rows if row is not None]
+            agent_cols = [col for col in agent_cols if col is not None]
+            
+            # Read goal state.
+            # line is currently "#goal".
+            goals = [['' for _ in range(num_cols)] for _ in range(num_rows)]
+            row = 0
+            for line in goal_level_lines:
+                for col, c in enumerate(line):
+                    if c in agents_in_team or c in boxes_in_team:
+                        goals[row][col] = c
+                
+                row += 1
+            # End.
+            # line is currently "#end".
+            State.agent_colors = agent_colors
+            State.walls = walls
+            State.box_colors = box_colors
+
+            initial_states.append(State(agent_rows, agent_cols, boxes, goals))
+            # print("end loop for team", team, flush=True)
+            # print("agent at", agent_rows, agent_cols)
+            # print("box position", boxes)
+            # print("goal position", goals)
+
+        return initial_states
+    
+    ''' Function for single-agent levels '''
+
     @staticmethod
     def parse_level(server_messages) -> 'State':
+
         # We can assume that the level file is conforming to specification, since the server verifies this.
         # Read domain.
         server_messages.readline() # #domain
@@ -29,7 +145,7 @@ class SearchClient:
         line = server_messages.readline()
         while not line.startswith('#'):
             split = line.split(':')
-            color = Color.from_string(split[0].strip())
+            color = Color.from_string(split[0].strip()) 
             entities = [e.strip() for e in split[1].split(',')]
             for e in entities:
                 if '0' <= e <= '9':
@@ -38,6 +154,7 @@ class SearchClient:
                     box_colors[ord(e) - ord('A')] = color
             line = server_messages.readline()
         
+
         # Read initial state.
         # line is currently "#initial".
         num_rows = 0
@@ -90,9 +207,8 @@ class SearchClient:
         State.agent_colors = agent_colors
         State.walls = walls
         State.box_colors = box_colors
-        State.goals = goals
-        return State(agent_rows, agent_cols, boxes)
 
+        return State(agent_rows, agent_cols, boxes, goals)
     
     @staticmethod
     def print_search_status(start_time: 'int', explored: '{State, ...}', frontier: 'Frontier') -> None:
@@ -117,42 +233,59 @@ class SearchClient:
         server_messages = sys.stdin
         if hasattr(server_messages, "reconfigure"):
             server_messages.reconfigure(encoding='ASCII')
-        initial_state = SearchClient.parse_level(server_messages)
-        
+        initial_states = SearchClient.parse_filtered_levels(server_messages)
+        #  initial_state = SearchClient.parse_level(server_messages)
+
+
         # Select search strategy.
-        frontier = None
-        if args.bfs:
-            frontier = FrontierBFS()
-        elif args.dfs:
-            frontier = FrontierDFS()
-        elif args.astar:
-            frontier = FrontierBestFirst(HeuristicAStar(initial_state))
-        elif args.wastar is not False:
-            frontier = FrontierBestFirst(HeuristicWeightedAStar(initial_state, args.wastar))
-        elif args.greedy:
-            frontier = FrontierBestFirst(HeuristicGreedy(initial_state))
-        elif args.bfws:
-            frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))
-        else:
-            # Default to BFS search.
-            frontier = FrontierBFS()
-            print('Defaulting to BFS search. Use arguments -bfs, -dfs, -astar, -wastar, or -greedy to set the search strategy.', file=sys.stderr, flush=True)
         
+
+        plans = []
+        for num, initial_state in enumerate(initial_states):
+
+            frontier = None
+            if args.bfs:
+                frontier = FrontierBFS()
+            elif args.dfs:
+                frontier = FrontierDFS()
+            elif args.astar:
+                frontier = FrontierBestFirst(HeuristicAStar(initial_state))
+            elif args.wastar:
+                frontier = FrontierBestFirst(HeuristicWeightedAStar(initial_state, args.wastar))
+            elif args.greedy:
+                frontier = FrontierBestFirst(HeuristicGreedy(initial_state))
+            elif args.bfws:
+                frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))
+            else:
+                # Default to BFS search.
+                frontier = FrontierBFS()
+                print('Defaulting to BFS search. Use arguments -bfs, -dfs, -astar, -wastar, or -greedy to set the search strategy.', file=sys.stderr, flush=True)            
+            plan = search(initial_state, frontier)
+            plans.append(plan) 
+            print("Ended search for initial state number", num)
+            print()
+            print("Plan extracted:")
+            print(plan)
+            print()
+        
+
         # Search for a plan.
-        print('Starting {}.'.format(frontier.get_name()), file=sys.stderr, flush=True)
-        plan = search(initial_state, frontier)
-        
+        # print('Starting {}.'.format(frontier.get_name()), file=sys.stderr, flush=True)
+        # plan = search(initial_state, frontier)
+
+        ''' Here we should fed the plans to a conflict manager '''
+
         # Print plan to server.
-        if plan is None:
-            print('Unable to solve level.', file=sys.stderr, flush=True)
-            sys.exit(0)
-        else:
-            print('Found solution of length {}.'.format(len(plan)), file=sys.stderr, flush=True)
+        # if plan is None:
+        #     print('Unable to solve level.', file=sys.stderr, flush=True)
+        #     sys.exit(0)
+        # else:
+        #     print('Found solution of length {}.'.format(len(plan)), file=sys.stderr, flush=True)
             
-            for joint_action in plan:
-                print("|".join(a.name_ for a in joint_action), flush=True)
-                # We must read the server's response to not fill up the stdin buffer and block the server.
-                response = server_messages.readline()
+        #     for joint_action in plan:
+        #         print("|".join(a.name_ for a in joint_action), flush=True)
+        #         # We must read the server's response to not fill up the stdin buffer and block the server.
+        #         response = server_messages.readline()
 
 if __name__ == '__main__':
     # Program arguments.

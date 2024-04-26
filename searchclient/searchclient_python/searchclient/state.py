@@ -5,7 +5,7 @@ from action import Action, ActionType
 class State:
     _RNG = random.Random(1)
     
-    def __init__(self, agent_rows, agent_cols, boxes):
+    def __init__(self, agent_rows, agent_cols, boxes, goals):
         '''
         Constructs an initial state.
         Arguments are not copied, and therefore should not be modified after being passed in.
@@ -32,6 +32,10 @@ class State:
         self.joint_action = None
         self.g = 0
         self._hash = None
+
+        ''' We passed the goals to the state to account for goal decomposition '''
+
+        self.goals = goals
     
     def result(self, joint_action: '[Action, ...]') -> 'State':
         '''
@@ -65,7 +69,7 @@ class State:
                 copy_agent_rows[agent] += action.agent_row_delta
                 copy_agent_cols[agent] += action.agent_col_delta
 
-        copy_state = State(copy_agent_rows, copy_agent_cols, copy_boxes)
+        copy_state = State(copy_agent_rows, copy_agent_cols, copy_boxes, self.goals)
         
         copy_state.parent = self
         copy_state.joint_action = joint_action[:]
@@ -74,9 +78,9 @@ class State:
         return copy_state
     
     def is_goal_state(self) -> 'bool':
-        for row in range(len(State.goals)):
-            for col in range(len(State.goals[row])):
-                goal = State.goals[row][col]
+        for row in range(len(self.goals)):
+            for col in range(len(self.goals[row])):
+                goal = self.goals[row][col]
                 if 'A' <= goal <= 'Z' and self.boxes[row][col] != goal:
                     return False
                 elif '0' <= goal <= '9' and not (self.agent_rows[ord(goal) - ord('0')] == row and self.agent_cols[ord(goal) - ord('0')] == col):
@@ -207,7 +211,7 @@ class State:
             _hash = _hash * prime + hash(tuple(State.agent_colors))
             _hash = _hash * prime + hash(tuple(tuple(row) for row in self.boxes))
             _hash = _hash * prime + hash(tuple(State.box_colors))
-            _hash = _hash * prime + hash(tuple(tuple(row) for row in State.goals))
+            _hash = _hash * prime + hash(tuple(tuple(row) for row in self.goals))
             _hash = _hash * prime + hash(tuple(tuple(row) for row in State.walls))
             self._hash = _hash
         return self._hash
@@ -221,7 +225,7 @@ class State:
         if State.walls != other.walls: return False
         if self.boxes != other.boxes: return False
         if State.box_colors != other.box_colors: return False
-        if State.goals != other.goals: return False
+        if self.goals != other.goals: return False
         return True
     
     def __repr__(self):
