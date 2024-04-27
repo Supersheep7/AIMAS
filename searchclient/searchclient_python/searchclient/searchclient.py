@@ -260,12 +260,12 @@ class SearchClient:
                 # Default to BFS search.
                 frontier = FrontierBFS()
                 print('Defaulting to BFS search. Use arguments -bfs, -dfs, -astar, -wastar, or -greedy to set the search strategy.', file=sys.stderr, flush=True)            
-            plan = search(initial_state, frontier)
+            plan, plan_repr = search(initial_state, frontier)
             plans.append(plan) 
             print("Ended search for initial state number", num)
             print()
             print("Plan extracted:")
-            print(plan)
+            print(plan_repr)
             print()
         
 

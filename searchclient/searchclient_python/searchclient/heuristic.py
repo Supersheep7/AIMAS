@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections import Counter, deque
+from state import atoms
 import numpy as np
 import string   
 
@@ -78,35 +79,6 @@ class Heuristic(metaclass=ABCMeta):
                 self.grids[unique_goal_id] = get_path(self.wall_matrix, goal_pos)
             else:
                 self.grids[goal_name] = get_path(self.wall_matrix, goal_pos)
-   
-    
-    def atoms(self, state: 'State'):
-            """
-            Generates a set of atoms that represent the current state.
-
-            Args:
-            - state (State): The current state of the environment.
-
-            Returns:
-            - Set[Tuple[str, Tuple[int, int]]]: A set of tuples representing the state atoms.
-            """
-            atoms = set()
-            for index, (row, col) in enumerate(zip(state.agent_rows, state.agent_cols)):
-                atoms.add((f'AgentAt{index}', (row, col)))
-
-            for (row_index, row) in enumerate(state.boxes):
-                for col_index, box in enumerate(row):
-                    if box:  
-                        atoms.add((f'BoxAt{box}', (row_index, col_index)))
-
-            # Goals are rigids, we can exclude them
-
-            # for row_index, row in enumerate(state.goals):
-            #     for col_index, goal in enumerate(row):
-            #         if goal:
-            #             atoms.add((f'GoalAt{goal}', (row_index, col_index)))
-
-            return frozenset(atoms)     # Need the frozenset so I can add the state representation to the novelty set
     
     # Manhattan
     def manhattan(self, agent, goal):
@@ -171,12 +143,12 @@ class Heuristic(metaclass=ABCMeta):
         if len(frontier) < 1:
             return w
 
-        state_repr = self.atoms(state)
+        state_repr = atoms(state)
 
         heuristic_val = self.h(state)
         filtered_seen_states = [seen_state[2] for seen_state in frontier if self.h(seen_state[2]) == heuristic_val]
         for seen_state in filtered_seen_states:
-            self.novelty_sets.add(self.atoms(seen_state))      # This should populate the set with a set for each seen state with the same h
+            self.novelty_sets.add(atoms(seen_state))      # This should populate the set with a set for each seen state with the same h
   
         for novel_set in self.novelty_sets:
             if state_repr - novel_set:        # If one atom is novel

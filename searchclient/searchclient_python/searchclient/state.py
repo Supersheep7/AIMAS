@@ -2,6 +2,35 @@ import random
 
 from action import Action, ActionType
 
+def atoms(state: 'State'):
+        """
+        Generates a set of atoms that represent the current state.
+
+        Args:
+        - state (State): The current state of the environment.
+
+        Returns:
+        - Set[Tuple[str, Tuple[int, int]]]: A set of tuples representing the state atoms.
+        """
+        atoms = set()
+        for index, (row, col) in enumerate(zip(state.agent_rows, state.agent_cols)):
+            atoms.add((f'AgentAt{index}', (row, col)))
+
+        for (row_index, row) in enumerate(state.boxes):
+            for col_index, box in enumerate(row):
+                if box:  
+                    atoms.add((f'BoxAt{box}', (row_index, col_index)))
+
+        # Goals are rigids, we can exclude them
+
+        # for row_index, row in enumerate(state.goals):
+        #     for col_index, goal in enumerate(row):
+        #         if goal:
+        #             atoms.add((f'GoalAt{goal}', (row_index, col_index)))
+
+        return frozenset(atoms)     # Need the frozenset so I can add the state representation to the novelty set
+
+
 class State:
     _RNG = random.Random(1)
     
@@ -196,11 +225,13 @@ class State:
     
     def extract_plan(self) -> '[Action, ...]':
         plan = [None for _ in range(self.g)]
+        plan_repr = plan
         state = self
         while state.joint_action is not None:
             plan[state.g - 1] = state.joint_action
+            plan_repr[state.g - 1] = list(sorted(atoms(state)))
             state = state.parent
-        return plan
+        return plan, plan_repr
     
     def __hash__(self):
         if self._hash is None:

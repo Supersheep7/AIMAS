@@ -64,7 +64,8 @@ def search(initial_state, frontier):
             if current_state.is_goal_state():
             # Solution found
                 print_search_status(explored, frontier)
-                return current_state.extract_plan()            
+                plan, plan_repr = current_state.extract_plan()
+                return plan, plan_repr         
 
             explored.add(current_state)
 
