@@ -5,7 +5,7 @@ import time
 import cProfile
 import memory
 from color import Color
-from state import State
+from state import State, Constraint
 from frontier import FrontierBFS, FrontierDFS, FrontierBestFirst, FrontierBestFirstWidth
 from heuristic import HeuristicAStar, HeuristicWeightedAStar, HeuristicGreedy, HeuristicBFWS
 from graphsearch import search
@@ -60,7 +60,7 @@ class SearchClient:
             num_rows += 1
             line = server_messages.readline()
 
-        
+        predefined_constraints = [Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(1, 2)], time=1), Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(2, 2)], time=2)]
         intial_goal_line = server_messages.readline()
         goal_level_lines = []
         line = intial_goal_line
@@ -74,10 +74,14 @@ class SearchClient:
         for team in teams:
             # Read initial state.
             # line is currently "#initial".
+            team_constraints = []
             team_list = team[1].split(', ')
             agents_in_team = [x for x in team_list if x.isdigit()]
             boxes_in_team = [x for x in team_list if x.isalpha()]
             num_agents = 0
+            for predefined_constraint in predefined_constraints:
+                if predefined_constraint.agent in agents_in_team:
+                    team_constraints.append(predefined_constraint)
             agent_rows = [None for _ in range(10)]
             agent_cols = [None for _ in range(10)]
             walls = [[False for _ in range(num_cols)] for _ in range(num_rows)]
@@ -115,8 +119,7 @@ class SearchClient:
             State.agent_colors = agent_colors
             State.walls = walls
             State.box_colors = box_colors
-
-            initial_states.append(State(agent_rows, agent_cols, boxes, goals))
+            initial_states.append(State(agent_rows, agent_cols, boxes, goals, team_constraints))
             # print("end loop for team", team, flush=True)
             # print("agent at", agent_rows, agent_cols)
             # print("box position", boxes)
