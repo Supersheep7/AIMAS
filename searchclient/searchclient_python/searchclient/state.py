@@ -1,7 +1,12 @@
 import random
 
 from action import Action, ActionType
-
+class Constraint:
+    def __init__(self, agent, loc_from, loc_to, time):
+        self.agent = agent
+        self.loc_from = loc_from  # Assuming loc_from is a list of starting locations
+        self.loc_to = loc_to      # Assuming loc_to is a list of ending locations
+        self.time = time
 def atoms(state: 'State'):
         """
         Generates a set of atoms that represent the current state.
@@ -34,7 +39,7 @@ def atoms(state: 'State'):
 class State:
     _RNG = random.Random(1)
     
-    def __init__(self, agent_rows, agent_cols, boxes, goals):
+    def __init__(self, agent_rows, agent_cols, boxes, goals,constraints = None):
         '''
         Constructs an initial state.
         Arguments are not copied, and therefore should not be modified after being passed in.
@@ -61,7 +66,7 @@ class State:
         self.joint_action = None
         self.g = 0
         self._hash = None
-
+        self.constraints = constraints if constraints else []
         ''' We passed the goals to the state to account for goal decomposition '''
 
         self.goals = goals
@@ -103,7 +108,7 @@ class State:
         copy_state.parent = self
         copy_state.joint_action = joint_action[:]
         copy_state.g = self.g + 1
-
+        copy_state.constraints = self.constraints
         return copy_state
     
     def is_goal_state(self) -> 'bool':
@@ -161,21 +166,21 @@ class State:
         elif action.type is ActionType.Move:
             destination_row = agent_row + action.agent_row_delta
             destination_col = agent_col + action.agent_col_delta
-            return self.is_free(destination_row, destination_col)
+            return self.is_free(destination_row, destination_col, self.g + 1)
         
         elif action.type is ActionType.Push:
             destination_row = agent_row + action.agent_row_delta
             destination_col = agent_col + action.agent_col_delta
             box_destination_row =  destination_row + action.box_row_delta
             box_destination_col =  destination_col + action.box_col_delta
-            return self.boxes[destination_row][destination_col] != '' and self.is_free(box_destination_row, box_destination_col)
+            return self.boxes[destination_row][destination_col] != '' and self.is_free(box_destination_row, box_destination_col, self.g + 1)
         
         elif action.type is ActionType.Pull:
             destination_row = agent_row + action.agent_row_delta
             destination_col = agent_col + action.agent_col_delta
             box_row =  agent_row  - action.box_row_delta
             box_col =  agent_col - action.box_col_delta
-            return self.boxes[box_row][box_col] != '' and self.is_free(destination_row, destination_col)
+            return self.boxes[box_row][box_col] != '' and self.is_free(destination_row, destination_col, self.g + 1)
                 
     def is_conflicting(self, joint_action: '[Action, ...]') -> 'bool':
         num_agents = len(self.agent_rows)
@@ -214,9 +219,13 @@ class State:
                         
         return False
     
-    def is_free(self, row: 'int', col: 'int') -> 'bool':
-        return not State.walls[row][col] and self.boxes[row][col] == '' and self.agent_at(row, col) is None
-    
+    def is_free(self, row: 'int', col: 'int', time:'int' = 0) -> 'bool':
+        if State.walls[row][col] or self.boxes[row][col] != '' or self.agent_at(row, col) is not None:
+            return False
+        for constraint in self.constraints:
+            if constraint.time == time and (row, col) in constraint.loc_to:
+                return False
+        return True
     def agent_at(self, row: 'int', col: 'int') -> 'char':
         for agent in range(len(self.agent_rows)):
             if self.agent_rows[agent] == row and self.agent_cols[agent] == col:
