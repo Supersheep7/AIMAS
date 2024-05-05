@@ -225,7 +225,7 @@ class State:
     
     def extract_plan(self) -> '[Action, ...]':
         plan = [None for _ in range(self.g)]
-        plan_repr = plan
+        plan_repr = plan[:]
         state = self
         while state.joint_action is not None:
             plan[state.g - 1] = state.joint_action
