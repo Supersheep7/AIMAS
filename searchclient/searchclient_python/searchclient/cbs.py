@@ -2,6 +2,7 @@ from state import State, Constraint
 from frontier import FrontierBestFirstWidth
 from heuristic import HeuristicBFWS
 from graphsearch import search
+from action import Action
 
 class Node():
 
@@ -9,7 +10,7 @@ class Node():
         self.initial_states = states
         self.constraints = [state.constraints for state in self.initial_states]
         self.plans, self.paths = plans_from_states(self.initial_states)
-        self.cost = len(max(self.plans)) # length of longest solution
+        self.cost = max([len(plan) for plan in self.plans]) # length of longest solution
 
 def match_length(arr1, arr2):
     len_diff = abs(len(arr2) - len(arr1))
@@ -21,24 +22,34 @@ def match_length(arr1, arr2):
         arr2 += [last_value] * len_diff
     return arr1, arr2
 
+def agents_to_rest(plans):
+    longest = max([len(plan) for plan in plans])
+    filtered_plans = [plan for plan in plans if len(plan) <= longest]
+    plans_with_rest = []
+    for plan in filtered_plans:
+        len_diff = longest - len(plan)
+        plan += [[Action.NoOp]] * len_diff
+        plans_with_rest.append(plan)
+    return plans_with_rest
+
 def plans_from_states(initial_states):
 
         plans = []
         plans_repr = []
 
         for num, initial_state in enumerate(initial_states):
-
             frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))  
             plan, plan_repr = search(initial_state, frontier)
             plans.append(plan) 
             plans_repr.append(plan_repr)
             print("Ended search for initial state number", num)
             print()
-            print("Plan extracted:")
-            print(plan)
-            print(plan_repr)
+            print("Plan extracted.")
             print()
-            return plans, plans_repr
+
+        plans = agents_to_rest(plans)
+        
+        return plans, plans_repr
 
 def validate(plan, plan_list):
 
@@ -59,20 +70,30 @@ def validate(plan, plan_list):
     return constraints    # [ConstraintObject0, ..., ConstraintObjectn]
 
 def CBS(initial_states):
-
     root = Node(initial_states)
     open = set()
     open.add(root)
 
     while open:
         P = min(open, key=lambda x: x.cost)
-        C = set()
+        C = []
 
         for path in P.paths:
-            C.add(validate(path, P.paths))      # C is the set of constraints. Here we add the constraints for each path
+            C.append(validate(path, P.paths))      # C is the set of constraints. Here we add the constraints for each path
+
+        C = list(filter(None, C))
 
         if len(C) < 1:
-            solution = [list(x) for x in zip(*P.plans)] 
+            print(P.plans)
+            print("Found solution")
+            if len(P.plans) == 1:
+                print("One agent")
+                solution = P.plans[0]
+                print(solution)
+            else:
+                print("Multiple agents")
+                solution = [list(x) for x in zip(*P.plans)] 
+                print(solution)
             return solution       # Found solution, return solution in joint action normal form
         
         for constraint_set in C:                # Iter through each constraint set (the n of constraints after the validation of a single path)
@@ -81,3 +102,5 @@ def CBS(initial_states):
             A.plans, A.paths = plans_from_states(A.initial_states)
             A.cost = len(max(A.plans))
             open.add(A)
+
+    return None

@@ -227,6 +227,7 @@ class State:
             if constraint.time == time and (row, col) in constraint.loc_to:
                 return False
         return True
+    
     def agent_at(self, row: 'int', col: 'int') -> 'char':
         for agent in range(len(self.agent_rows)):
             if self.agent_rows[agent] == row and self.agent_cols[agent] == col:
