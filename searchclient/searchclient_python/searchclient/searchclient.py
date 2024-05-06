@@ -1,14 +1,9 @@
 import argparse
-import io
 import sys
 import time
-import cProfile
 import memory
 from color import Color
 from state import State, Constraint
-from frontier import FrontierBFS, FrontierDFS, FrontierBestFirst, FrontierBestFirstWidth
-from heuristic import HeuristicAStar, HeuristicWeightedAStar, HeuristicGreedy, HeuristicBFWS
-from graphsearch import search
 from cbs import CBS
 
 def match_length(arr1, arr2):
@@ -131,98 +126,8 @@ class SearchClient:
             State.walls = walls
             State.box_colors = box_colors
             initial_states.append(State(agent_rows, agent_cols, boxes, goals, team_constraints))
-            # print("end loop for team", team, flush=True)
-            # print("agent at", agent_rows, agent_cols)
-            # print("box position", boxes)
-            # print("goal position", goals)
 
         return initial_states
-    
-    ''' Function for single-agent levels '''
-
-    @staticmethod
-    def parse_level(server_messages) -> 'State':
-
-        # We can assume that the level file is conforming to specification, since the server verifies this.
-        # Read domain.
-        server_messages.readline() # #domain
-        server_messages.readline() # hospital
-        
-        # Read Level name.
-        server_messages.readline() # #levelname
-        server_messages.readline() # <name>
-        
-        # Read colors.
-        server_messages.readline() # #colors
-        agent_colors = [None for _ in range(10)]
-        box_colors = [None for _ in range(26)]
-        line = server_messages.readline()
-        while not line.startswith('#'):
-            split = line.split(':')
-            color = Color.from_string(split[0].strip()) 
-            entities = [e.strip() for e in split[1].split(',')]
-            for e in entities:
-                if '0' <= e <= '9':
-                    agent_colors[ord(e) - ord('0')] = color
-                elif 'A' <= e <= 'Z':
-                    box_colors[ord(e) - ord('A')] = color
-            line = server_messages.readline()
-        
-
-        # Read initial state.
-        # line is currently "#initial".
-        num_rows = 0
-        num_cols = 0
-        level_lines = []
-        line = server_messages.readline()
-        while not line.startswith('#'):
-            level_lines.append(line)
-            num_cols = max(num_cols, len(line))
-            num_rows += 1
-            line = server_messages.readline()
-
-        num_agents = 0
-        agent_rows = [None for _ in range(10)]
-        agent_cols = [None for _ in range(10)]
-        walls = [[False for _ in range(num_cols)] for _ in range(num_rows)]
-        boxes = [['' for _ in range(num_cols)] for _ in range(num_rows)]
-        row = 0
-        for line in level_lines:
-            for col, c in enumerate(line):
-                if '0' <= c <= '9':
-                    agent_rows[ord(c) - ord('0')] = row
-                    agent_cols[ord(c) - ord('0')] = col
-                    num_agents += 1
-                elif 'A' <= c <= 'Z':
-                    boxes[row][col] = c
-                elif c == '+':
-                    walls[row][col] = True
-            
-            row += 1
-        del agent_rows[num_agents:]
-        del agent_rows[num_agents:]
-        
-        # Read goal state.
-        # line is currently "#goal".
-        goals = [['' for _ in range(num_cols)] for _ in range(num_rows)]
-        line = server_messages.readline()
-        row = 0
-        while not line.startswith('#'):
-            for col, c in enumerate(line):
-                if '0' <= c <= '9' or 'A' <= c <= 'Z':
-                    goals[row][col] = c
-            
-            row += 1
-            line = server_messages.readline()
-        
-        # End.
-        # line is currently "#end".
-        
-        State.agent_colors = agent_colors
-        State.walls = walls
-        State.box_colors = box_colors
-
-        return State(agent_rows, agent_cols, boxes, goals)
     
     @staticmethod
     def print_search_status(start_time: 'int', explored: '{State, ...}', frontier: 'Frontier') -> None:
@@ -274,29 +179,8 @@ class SearchClient:
         
         initial_states = SearchClient.parse_filtered_levels(server_messages)
         #  initial_state = SearchClient.parse_level(server_messages)
-
-         # if args.bfs:
-            #     frontier = FrontierBFS()
-            # elif args.dfs:
-            #     frontier = FrontierDFS()
-            # elif args.astar:
-            #     frontier = FrontierBestFirst(HeuristicAStar(initial_state))
-            # elif args.wastar:
-            #     frontier = FrontierBestFirst(HeuristicWeightedAStar(initial_state, args.wastar))
-            # elif args.greedy:
-            #     frontier = FrontierBestFirst(HeuristicGreedy(initial_state))
-            # elif args.bfws:
-            #     frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))
-            # else:
-            #     # Default to BFS search.
-            #     frontier = FrontierBFS()
-            #     print('Defaulting to BFS search. Use arguments -bfs, -dfs, -astar, -wastar, or -greedy to set the search strategy.', file=sys.stderr, flush=True)          
-
-        joint_plan = CBS(initial_states) 
-
-        # Search for a plan.
-        # print('Starting {}.'.format(frontier.get_name()), file=sys.stderr, flush=True)
-        # plan = search(initial_state, frontier)
+        if args.cbs:
+            joint_plan = CBS(initial_states) 
 
         # Print plan to server.
         if joint_plan is None:
@@ -322,6 +206,7 @@ if __name__ == '__main__':
     strategy_group.add_argument('-wastar', action='store', dest='wastar', nargs='?', type=int, default=False, const=5, help='Use the WA* strategy.')
     strategy_group.add_argument('-greedy', action='store_true', dest='greedy', help='Use the Greedy strategy.')
     strategy_group.add_argument('-bfws', action='store_true', dest='bfws', help='Use the BFWS strategy.')
+    strategy_group.add_argument('-cbs', action='store_true', dest='cbs', help='Use the CBS strategy.')
     
     args = parser.parse_args()
     
