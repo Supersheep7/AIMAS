@@ -1,12 +1,14 @@
 import random
 
 from action import Action, ActionType
+
 class Constraint:
     def __init__(self, agent, loc_from, loc_to, time):
         self.agent = agent
         self.loc_from = loc_from  # Assuming loc_from is a list of starting locations
         self.loc_to = loc_to      # Assuming loc_to is a list of ending locations
         self.time = time
+
 def atoms(state: 'State'):
         """
         Generates a set of atoms that represent the current state.
@@ -35,11 +37,10 @@ def atoms(state: 'State'):
 
         return frozenset(atoms)     # Need the frozenset so I can add the state representation to the novelty set
 
-
 class State:
     _RNG = random.Random(1)
     
-    def __init__(self, agent_rows, agent_cols, boxes, goals,constraints = None):
+    def __init__(self, agent_rows, agent_cols, boxes, goals, constraints = None):
         '''
         Constructs an initial state.
         Arguments are not copied, and therefore should not be modified after being passed in.
