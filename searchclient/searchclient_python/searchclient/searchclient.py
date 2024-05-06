@@ -311,25 +311,29 @@ class SearchClient:
                 print(plan_repr)
                 print()
                 return plans, plans_repr
+
+        plans, _ = plans_from_states(initial_states)
         
-        plans_from_states(initial_states)
+
         # Search for a plan.
         # print('Starting {}.'.format(frontier.get_name()), file=sys.stderr, flush=True)
         # plan = search(initial_state, frontier)
 
         ''' Here we should fed the plans to a conflict manager '''
 
+        joint_plan = [list(x) for x in zip(*plans)]
+
         # Print plan to server.
-        # if plan is None:
-        #     print('Unable to solve level.', file=sys.stderr, flush=True)
-        #     sys.exit(0)
-        # else:
-        #     print('Found solution of length {}.'.format(len(plan)), file=sys.stderr, flush=True)
+        if joint_plan is None:
+            print('Unable to solve level.', file=sys.stderr, flush=True)
+            sys.exit(0)
+        else:
+            print('Found solution of length {}.'.format(len(joint_plan)), file=sys.stderr, flush=True)
             
-        #     for joint_action in plan:
-        #         print("|".join(a.name_ for a in joint_action), flush=True)
-        #         # We must read the server's response to not fill up the stdin buffer and block the server.
-        #         response = server_messages.readline()
+            for joint_action in joint_plan:
+                print("|".join(a.name_ for a in joint_action), flush=True)
+                # We must read the server's response to not fill up the stdin buffer and block the server.
+                response = server_messages.readline()
 
 if __name__ == '__main__':
     # Program arguments.
