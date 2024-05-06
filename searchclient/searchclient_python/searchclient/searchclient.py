@@ -9,6 +9,7 @@ from state import State, Constraint
 from frontier import FrontierBFS, FrontierDFS, FrontierBestFirst, FrontierBestFirstWidth
 from heuristic import HeuristicAStar, HeuristicWeightedAStar, HeuristicGreedy, HeuristicBFWS
 from graphsearch import search
+from cbs import CBS
 
 def match_length(arr1, arr2):
     len_diff = abs(len(arr2) - len(arr1))
@@ -274,54 +275,28 @@ class SearchClient:
         initial_states = SearchClient.parse_filtered_levels(server_messages)
         #  initial_state = SearchClient.parse_level(server_messages)
 
+         # if args.bfs:
+            #     frontier = FrontierBFS()
+            # elif args.dfs:
+            #     frontier = FrontierDFS()
+            # elif args.astar:
+            #     frontier = FrontierBestFirst(HeuristicAStar(initial_state))
+            # elif args.wastar:
+            #     frontier = FrontierBestFirst(HeuristicWeightedAStar(initial_state, args.wastar))
+            # elif args.greedy:
+            #     frontier = FrontierBestFirst(HeuristicGreedy(initial_state))
+            # elif args.bfws:
+            #     frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))
+            # else:
+            #     # Default to BFS search.
+            #     frontier = FrontierBFS()
+            #     print('Defaulting to BFS search. Use arguments -bfs, -dfs, -astar, -wastar, or -greedy to set the search strategy.', file=sys.stderr, flush=True)          
 
-        # Select search strategy.
-        
-        def plans_from_states(initial_states):
-
-            plans = []
-            plans_repr = []
-
-            for num, initial_state in enumerate(initial_states):
-
-                frontier = None
-                if args.bfs:
-                    frontier = FrontierBFS()
-                elif args.dfs:
-                    frontier = FrontierDFS()
-                elif args.astar:
-                    frontier = FrontierBestFirst(HeuristicAStar(initial_state))
-                elif args.wastar:
-                    frontier = FrontierBestFirst(HeuristicWeightedAStar(initial_state, args.wastar))
-                elif args.greedy:
-                    frontier = FrontierBestFirst(HeuristicGreedy(initial_state))
-                elif args.bfws:
-                    frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))
-                else:
-                    # Default to BFS search.
-                    frontier = FrontierBFS()
-                    print('Defaulting to BFS search. Use arguments -bfs, -dfs, -astar, -wastar, or -greedy to set the search strategy.', file=sys.stderr, flush=True)            
-                plan, plan_repr = search(initial_state, frontier)
-                plans.append(plan) 
-                plans_repr.append(plan_repr)
-                print("Ended search for initial state number", num)
-                print()
-                print("Plan extracted:")
-                print(plan)
-                print(plan_repr)
-                print()
-                return plans, plans_repr
-
-        plans, _ = plans_from_states(initial_states)
-        
+        joint_plan = CBS(initial_states) 
 
         # Search for a plan.
         # print('Starting {}.'.format(frontier.get_name()), file=sys.stderr, flush=True)
         # plan = search(initial_state, frontier)
-
-        ''' Here we should fed the plans to a conflict manager '''
-
-        joint_plan = [list(x) for x in zip(*plans)]
 
         # Print plan to server.
         if joint_plan is None:
