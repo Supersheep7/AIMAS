@@ -29,9 +29,6 @@ class Node():
         self.constraints = constraints
         for state in self.initial_states:
             state.constraints.extend(self.constraints)
-        self.constraints = constraints
-        for state in self.initial_states:
-            state.constraints.extend(self.constraints)
         self.plans, self.paths = plans_from_states(self.initial_states)
         print("Paths:", self.paths, flush=True)
         self.cost = max([len(plan) for plan in self.plans]) # length of longest solution

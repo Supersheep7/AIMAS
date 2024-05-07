@@ -59,7 +59,6 @@ class State:
         self.boxes = boxes
         self.parent = None
         self.joint_action = None
-        self.agents = agents
         self.g = 0
         self._hash = None
         self.constraints = constraints if constraints else []
@@ -166,21 +165,21 @@ class State:
         elif action.type is ActionType.Move:
             destination_row = agent_row + action.agent_row_delta
             destination_col = agent_col + action.agent_col_delta
-            return self.is_free(agent,destination_row, destination_col, self.g + 1)
+            return self.is_free(destination_row, destination_col, self.g + 1)
         
         elif action.type is ActionType.Push:
             destination_row = agent_row + action.agent_row_delta
             destination_col = agent_col + action.agent_col_delta
             box_destination_row =  destination_row + action.box_row_delta
             box_destination_col =  destination_col + action.box_col_delta
-            return self.boxes[destination_row][destination_col] != '' and self.is_free(agent,box_destination_row, box_destination_col, self.g + 1)
+            return self.boxes[destination_row][destination_col] != '' and self.is_free(box_destination_row, box_destination_col, self.g + 1)
         
         elif action.type is ActionType.Pull:
             destination_row = agent_row + action.agent_row_delta
             destination_col = agent_col + action.agent_col_delta
             box_row =  agent_row  - action.box_row_delta
             box_col =  agent_col - action.box_col_delta
-            return self.boxes[box_row][box_col] != '' and self.is_free(agent,destination_row, destination_col, self.g + 1)
+            return self.boxes[box_row][box_col] != '' and self.is_free(destination_row, destination_col, self.g + 1)
                 
     def is_conflicting(self, joint_action: '[Action, ...]') -> 'bool':
         num_agents = len(self.agent_rows)
@@ -219,7 +218,7 @@ class State:
                         
         return False
     
-    def is_free(self,agent: 'int', row: 'int', col: 'int', time:'int' = 0) -> 'bool':
+    def is_free(self, row: 'int', col: 'int', time:'int' = 0) -> 'bool':
         if State.walls[row][col] or self.boxes[row][col] != '' or self.agent_at(row, col) is not None:
             return False
         for constraint in self.constraints:
