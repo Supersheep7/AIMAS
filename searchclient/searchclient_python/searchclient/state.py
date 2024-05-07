@@ -20,7 +20,7 @@ def atoms(state: 'State'):
         - Set[Tuple[str, Tuple[int, int]]]: A set of tuples representing the state atoms.
         """
         atoms = set()
-        for index, (row, col) in enumerate(zip(state.agent_rows, state.agent_cols)):
+        for index, row, col in zip(state.worker_name, state.agent_rows, state.agent_cols):
             atoms.add((f'AgentAt{index}', (row, col)))
 
         for (row_index, row) in enumerate(state.boxes):
@@ -28,19 +28,12 @@ def atoms(state: 'State'):
                 if box:  
                     atoms.add((f'BoxAt{box}', (row_index, col_index)))
 
-        # Goals are rigids, we can exclude them
-
-        # for row_index, row in enumerate(state.goals):
-        #     for col_index, goal in enumerate(row):
-        #         if goal:
-        #             atoms.add((f'GoalAt{goal}', (row_index, col_index)))
-
         return frozenset(atoms)     # Need the frozenset so I can add the state representation to the novelty set
 
 class State:
     _RNG = random.Random(1)
     
-    def __init__(self, agent_rows, agent_cols, boxes, goals, constraints = None):
+    def __init__(self, agent_rows, agent_cols, boxes, goals, worker_name, constraints = None):
         '''
         Constructs an initial state.
         Arguments are not copied, and therefore should not be modified after being passed in.
@@ -60,6 +53,7 @@ class State:
                 
         Note: The state should be considered immutable after it has been hashed, e.g. added to a dictionary or set.
         '''
+        self.worker_name = worker_name
         self.agent_rows = agent_rows
         self.agent_cols = agent_cols
         self.boxes = boxes
@@ -68,6 +62,8 @@ class State:
         self.g = 0
         self._hash = None
         self.constraints = constraints if constraints else []
+        if self.constraints:
+            print("State.py constraint:", self.constraints[0].loc_to, flush=True)
         ''' We passed the goals to the state to account for goal decomposition '''
 
         self.goals = goals
@@ -81,6 +77,7 @@ class State:
         # Copy this state.
         copy_agent_rows = self.agent_rows[:]
         copy_agent_cols = self.agent_cols[:]
+        copy_worker_name = self.worker_name[:]
         copy_boxes = [row[:] for row in self.boxes]
         
         # Apply each action.
@@ -104,12 +101,11 @@ class State:
                 copy_agent_rows[agent] += action.agent_row_delta
                 copy_agent_cols[agent] += action.agent_col_delta
 
-        copy_state = State(copy_agent_rows, copy_agent_cols, copy_boxes, self.goals)
-        
+        copy_state = State(copy_agent_rows, copy_agent_cols, copy_boxes, self.goals, copy_worker_name, self.constraints)
         copy_state.parent = self
         copy_state.joint_action = joint_action[:]
         copy_state.g = self.g + 1
-        copy_state.constraints = self.constraints
+        copy_state.constraints = self.constraints[:]
         return copy_state
     
     def is_goal_state(self) -> 'bool':
@@ -224,7 +220,9 @@ class State:
         if State.walls[row][col] or self.boxes[row][col] != '' or self.agent_at(row, col) is not None:
             return False
         for constraint in self.constraints:
-            if constraint.time == time and (row, col) in constraint.loc_to:
+            print("is_free constraint:", constraint.loc_to, constraint.time, flush=True)
+            if (constraint.time == time and (row, col) in constraint.loc_to and constraint.agent == self.worker_name):
+                print("This location is NOT free:", constraint.loc_to, flush=True)
                 return False
         return True
     

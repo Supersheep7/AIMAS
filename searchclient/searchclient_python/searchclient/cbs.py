@@ -4,11 +4,31 @@ from heuristic import HeuristicBFWS
 from graphsearch import search
 from action import Action
 
+def plans_from_states(initial_states):
+
+        plans = []
+        plans_repr = []
+
+        for num, initial_state in enumerate(initial_states):
+            frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))
+            plan, plan_repr = search(initial_state, frontier)
+            plans.append(plan) 
+            plans_repr.append(plan_repr)
+            print("Ended search for initial state number", num)
+            print()
+            print("Plan extracted.")
+            print()
+
+        plans = agents_to_rest(plans)
+        return plans, plans_repr
+
 class Node():
 
-    def __init__(self, states):
+    def __init__(self, states, constraints = []):
         self.initial_states = states
-        self.constraints = [state.constraints for state in self.initial_states]
+        self.constraints = constraints
+        for state in self.initial_states:
+            state.constraints.extend(self.constraints)
         self.plans, self.paths = plans_from_states(self.initial_states)
         self.cost = max([len(plan) for plan in self.plans]) # length of longest solution
 
@@ -32,40 +52,87 @@ def agents_to_rest(plans):
         plans_with_rest.append(plan)
     return plans_with_rest
 
-def plans_from_states(initial_states):
-
-        plans = []
-        plans_repr = []
-
-        for num, initial_state in enumerate(initial_states):
-            frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))  
-            plan, plan_repr = search(initial_state, frontier)
-            plans.append(plan) 
-            plans_repr.append(plan_repr)
-            print("Ended search for initial state number", num)
-            print()
-            print("Plan extracted.")
-            print()
-
-        plans = agents_to_rest(plans)
-        
-        return plans, plans_repr
-
 def validate(plan, plan_list):
+    """
+    Generates constraints based on conflicts between the given plan and other plans in the plan_list,
+    including illegal crossings.
 
-    # Simple implementation for MAPF. We could need this also for teams and add boxes to the mix
-    agent_i = plan[0][0][0]     # AgentAt0
-    
+    Parameters:
+    - plan: The plan to validate for conflicts.
+    - plan_list: List of all plans to compare against.
+
+    Returns:
+    - List[Constraint]: A list of constraints identified from conflicts.
+    """
+    agent_i_full = plan[0][0][0]  # Something like 'AgentAt0'
+    agent_i = agent_i_full.split('AgentAt')[-1]  # Extract just the number after 'AgentAt'
+
     other_plans = [lst for lst in plan_list if lst is not plan]
     constraints = []
 
     for other_plan in other_plans:
-        
-        # Pads the shortest plan with copies of the last atom representation (agent still on the goal cell)
-        plan, other_plan = match_length(plan, other_plan)   
-        for j in range(len(plan)):
-            if plan[j][0][1] == other_plan[j][0][1] or plan[j][1][1] == other_plan[j][1][1]:
-                constraints.append(Constraint(agent=agent_i, loc_from=(plan[j-1][0][1], plan[j-1][1][1]), loc_to=(plan[j][0][1], plan[j][1][1]), time=j))
+        # Ensure both plans are of equal length
+        plan, other_plan = match_length(plan, other_plan)
+
+        for j in range(1, len(plan)):
+            # Get current and previous states for both plans
+            agent_state_current = plan[j][0][1]
+            agent_state_previous = plan[j - 1][0][1]
+            box_state_current = plan[j][1][1] if len(plan[j]) > 1 else None
+            box_state_previous = plan[j - 1][1][1] if len(plan[j - 1]) > 1 else None
+
+            other_agent_state_current = other_plan[j][0][1]
+            other_agent_state_previous = other_plan[j - 1][0][1]
+            other_box_state_current = other_plan[j][1][1] if len(other_plan[j]) > 1 else None
+            other_box_state_previous = other_plan[j - 1][1][1] if len(other_plan[j - 1]) > 1 else None
+
+            # Conflicting agent positions
+            if agent_state_current == other_agent_state_current:
+                constraints.append(Constraint(
+                    agent=agent_i,
+                    loc_from=(agent_state_previous, box_state_previous),
+                    loc_to=(agent_state_current, box_state_current),
+                    time=j+1
+                ))
+
+            # Conflicting box positions
+            if box_state_current is not None and box_state_current == other_box_state_current:
+                constraints.append(Constraint(
+                    agent=agent_i,
+                    loc_from=(agent_state_previous, box_state_previous),
+                    loc_to=(agent_state_current, box_state_current),
+                    time=j+1
+                ))
+
+            # Illegal crossing detection
+            # Agents crossing each other
+            if agent_state_current == other_agent_state_previous and agent_state_previous == other_agent_state_current:
+                constraints.append(Constraint(
+                    agent=agent_i,
+                    loc_from=(agent_state_previous, box_state_previous),
+                    loc_to=(agent_state_current, box_state_current),
+                    time=j+1
+                ))
+
+            # Boxes crossing each other
+            if box_state_current is not None and box_state_previous is not None and \
+                    box_state_current == other_box_state_previous and box_state_previous == other_box_state_current:
+                constraints.append(Constraint(
+                    agent=agent_i,
+                    loc_from=(agent_state_previous, box_state_previous),
+                    loc_to=(agent_state_current, box_state_current),
+                    time=j+1
+                ))
+
+            # Agent and Box crossing
+            if box_state_current is not None and \
+                    (agent_state_current == other_box_state_previous and agent_state_previous == other_box_state_current):
+                constraints.append(Constraint(
+                    agent=agent_i,
+                    loc_from=(agent_state_previous, box_state_previous),
+                    loc_to=(agent_state_current, box_state_current),
+                    time=j+1
+                ))
 
     return constraints    # [ConstraintObject0, ..., ConstraintObjectn]
 
@@ -76,17 +143,17 @@ def CBS(initial_states):
     open.add(root)
 
     while open:
+        print("LOOPING!!!!!")
         P = min(open, key=lambda x: x.cost)
         C = []
 
         for path in P.paths:
-            C.append(validate(path, P.paths))      # C is the set of constraints. Here we add the constraints for each path
+            C.extend(validate(path, P.paths))      # C is the set of constraints. Here we add the constraints for each path
 
-        C = list(filter(None, C))
-
-        if len(C) < 1:
+        if not C:
             print(P.plans)
             print("Found solution")
+            print("Positions:", P.paths)
             if len(P.plans) == 1:
                 print("One agent")
                 solution = P.plans[0]
@@ -96,11 +163,11 @@ def CBS(initial_states):
                 solution = [list(x) for x in zip(*P.plans)]
             return solution, is_single       # Found solution, return solution in joint action normal form
         
-        for constraint_set in C:                # Iter through each constraint set (the n of constraints after the validation of a single path)
-            A = Node(initial_states)            # Initialize node
-            A.constraints = P.constraints + constraint_set  
-            A.plans, A.paths = plans_from_states(A.initial_states)
-            A.cost = len(max(A.plans))
+        for constraint in C:                # Iter through each constraint set (the n of constraints after the validation of a single path)
+            print("SBOOPING", flush=True)
+            print("Added constraint:", constraint.loc_to, constraint.time , flush=True)
+            A = Node(initial_states, P.constraints + [constraint])            # Initialize node
+            print("Done node")
             open.add(A)
 
     return None

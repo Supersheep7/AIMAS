@@ -35,24 +35,34 @@ class SearchClient:
         agent_colors = [None for _ in range(10)]
         box_colors = [None for _ in range(26)]
         line = server_messages.readline()
+
+        # Get teams from the level
+
         teams = []
+
         while not line.startswith('#'):
             split = line.split(':')
-            teams.append((split[0], split[1].strip()))
             color = Color.from_string(split[0].strip())
             entities = [e.strip() for e in split[1].split(',')]
+            agentz = []
+            boxez = []
             for e in entities:
                 if '0' <= e <= '9':
                     agent_colors[ord(e) - ord('0')] = color
+                    agentz.append(e)
                 elif 'A' <= e <= 'Z':
                     box_colors[ord(e) - ord('A')] = color
+                    boxez.append(e)
+            teams.append([(split[0]), agentz, boxez])
             line = server_messages.readline()
 
-        print(teams)            # example = [('red', '0, A'), ('green', '1, B')]
+        # Got teams from the level
 
         ''' Now we need to store the server messages in level_lines and goal_level_lines '''
 
         initial_states = []
+
+        # Read initial state lines
 
         initial_line = server_messages.readline()
         level_lines = []
@@ -66,70 +76,114 @@ class SearchClient:
             num_rows += 1
             line = server_messages.readline()
 
-        predefined_constraints = [Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(1, 2)], time=1), Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(2, 2)], time=2)]
-        intial_goal_line = server_messages.readline()
+        # Read goal lines
+
+        initial_goal_line = server_messages.readline()
         goal_level_lines = []
-        line = intial_goal_line
+        line = initial_goal_line
         
         while not line.startswith('#'):
             goal_level_lines.append(line)
             line = server_messages.readline()
 
-        ''' Loop and build a different level representation for each color '''
+        ''' Loop and build a different level representation for each worker '''
 
-        for team in teams:
-            # Read initial state.
-            # line is currently "#initial".
-            team_constraints = []
-            team_list = team[1].split(', ')
-            agents_in_team = [x for x in team_list if x.isdigit()]
-            boxes_in_team = [x for x in team_list if x.isalpha()]
-            num_agents = 0
-            for predefined_constraint in predefined_constraints:
-                if predefined_constraint.agent in agents_in_team:
-                    team_constraints.append(predefined_constraint)
-            agent_rows = [None for _ in range(10)]
-            agent_cols = [None for _ in range(10)]
-            walls = [[False for _ in range(num_cols)] for _ in range(num_rows)]
-            boxes = [['' for _ in range(num_cols)] for _ in range(num_rows)]
-            row = 0
-            for line in level_lines:
+        # Initialize our workers
+
+        class Worker():
+            def __init__(self, color, name, boxes):
+                self.name = name
+                self.movable = boxes
+                self.agent_rows = [None for _ in range(10)]
+                self.agent_cols = [None for _ in range(10)]
+                self.goals = [['' for _ in range(num_cols)] for _ in range(num_rows)]
+                self.boxes = [['' for _ in range(num_cols)] for _ in range(num_rows)]
+                self.color = color
+                self.constraints = None
+        
+        workers = []
+
+        for team in teams: 
+            color = team[0]
+            agents = team[1]
+            movable = team[2]
+            for agent in agents:
+                workers.append(Worker(color, agent, movable))
+
+        walls = [[False for _ in range(num_cols)] for _ in range(num_rows)]
+        
+        boxes_to_assign = []
+        goals_to_assign = []
+        
+        for worker in workers:
+            for row, line in enumerate(level_lines):
                 for col, c in enumerate(line):
-                    if c in agents_in_team:
-                        agent_rows[ord(c) - ord('0')] = row
-                        agent_cols[ord(c) - ord('0')] = col
-                        num_agents += 1
-                    elif c in boxes_in_team:
-                        boxes[row][col] = c
+                    if c == worker.name:
+                        worker.agent_rows[ord(c) - ord('0')] = row
+                        worker.agent_cols[ord(c) - ord('0')] = col
+                    elif c.isalpha():
+                        boxes_to_assign.append((c, (row, col)))
                     elif c == '+':
                         walls[row][col] = True
-                
-                row += 1
             
-            # Strip from None values
-            agent_rows = [row for row in agent_rows if row is not None]
-            agent_cols = [col for col in agent_cols if col is not None]
-            
-            # Read goal state.
-            # line is currently "#goal".
-            goals = [['' for _ in range(num_cols)] for _ in range(num_rows)]
-            row = 0
-            for line in goal_level_lines:
+            worker.agent_rows = [row for row in worker.agent_rows if row is not None]
+            worker.agent_cols = [col for col in worker.agent_cols if col is not None]
+
+            for row, line in enumerate(goal_level_lines):
                 for col, c in enumerate(line):
-                    if c in agents_in_team or c in boxes_in_team:
-                        goals[row][col] = c
-                
-                row += 1
-            # End.
-            # line is currently "#end".
-            State.agent_colors = agent_colors
-            State.walls = walls
-            State.box_colors = box_colors
-            initial_states.append(State(agent_rows, agent_cols, boxes, goals, team_constraints))
+                        if c.isalpha():
+                            goals_to_assign.append((c, (row, col)))       
+            
+        # Here we have populated boxes to assign and goals to assign
+        current_worker_index = 0
+
+        for goal in goals_to_assign:
+            row, col = goal[1]
+            chosen_worker = None
+
+            for _ in range(len(workers)):
+                if goal[0] in workers[current_worker_index].movable:
+                    chosen_worker = workers[current_worker_index]
+                    break
+                current_worker_index = (current_worker_index + 1) % len(workers)
+
+            chosen_worker.goals[row][col] = goal[0]
+            
+            box_for_goal = next(box for box in boxes_to_assign if box[0] == goal[0])
+            boxes_to_assign.remove(box_for_goal)
+            row, col = box_for_goal[1]
+            chosen_worker.boxes[row][col] = box_for_goal[0]
+
+        current_worker_index = 0
+
+        while boxes_to_assign:
+            box = boxes_to_assign.pop()
+            row, col = box[1]
+            chosen_worker = None
+
+            for _ in range(len(workers)):
+                if box[0] in workers[current_worker_index].movable:
+                    chosen_worker = workers[current_worker_index]
+                    break
+                current_worker_index = (current_worker_index + 1) % len(workers) 
+
+            chosen_worker.boxes[row][col] = box[0]
+          
+        # End.
+        # line is currently "#end".
+        State.agent_colors = agent_colors
+        State.walls = walls
+        State.box_colors = box_colors
+            
+        for worker in workers:
+            
+            print("Name",  worker.name, "Boxes", worker.boxes, "Goals", worker.goals)
+            initial_states.append(State(worker.agent_rows, worker.agent_cols, worker.boxes, worker.goals, worker.name))
 
         return initial_states
     
     @staticmethod
+
     def print_search_status(start_time: 'int', explored: '{State, ...}', frontier: 'Frontier') -> None:
         status_template = '#Expanded: {:8,}, #Frontier: {:8,}, #Generated: {:8,}, Time: {:3.3f} s\n[Alloc: {:4.2f} MB, MaxAlloc: {:4.2f} MB]'
         elapsed_time = time.perf_counter() - start_time

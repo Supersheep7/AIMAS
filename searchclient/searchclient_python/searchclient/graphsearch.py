@@ -8,7 +8,7 @@ globals().update(Action.__members__)
 start_time = time.perf_counter()
 
 def search(initial_state, frontier):
-
+    
     output_fixed_solution = False
 
     if output_fixed_solution:
@@ -54,13 +54,15 @@ def search(initial_state, frontier):
                 print_search_status(explored, frontier)
                 print('Maximum memory usage exceeded.', file=sys.stderr, flush=True)
                 return None
+            
+            print(iterations)
 
             # Your code here...
             if frontier.is_empty():
                 return None
 
             current_state = frontier.pop()
-
+            
             if current_state.is_goal_state():
             # Solution found
                 print_search_status(explored, frontier)
