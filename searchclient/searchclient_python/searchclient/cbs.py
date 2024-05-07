@@ -54,8 +54,8 @@ def plans_from_states(initial_states):
 def validate(plan, plan_list):
 
     # Simple implementation for MAPF. We could need this also for teams and add boxes to the mix
-    agent_i = plan[0][0][0]     # AgentAt0
-    
+    agent_i_full = plan[0][0][0]  # Something like 'AgentAt0'
+    agent_i = agent_i_full.split('AgentAt')[-1]
     other_plans = [lst for lst in plan_list if lst is not plan]
     constraints = []
 
@@ -63,7 +63,9 @@ def validate(plan, plan_list):
         
         # Pads the shortest plan with copies of the last atom representation (agent still on the goal cell)
         plan, other_plan = match_length(plan, other_plan)   
-        for j in range(len(plan)):
+        print("Plan len:", len(plan), "Other plan len:", len(other_plan),flush=True)
+        for j in range(1,len(plan)):
+            print("Plan:", plan[j], "Other plan:", other_plan[j],flush=True)
             if plan[j][0][1] == other_plan[j][0][1] or plan[j][1][1] == other_plan[j][1][1]:
                 constraints.append(Constraint(agent=agent_i, loc_from=(plan[j-1][0][1], plan[j-1][1][1]), loc_to=(plan[j][0][1], plan[j][1][1]), time=j))
 
@@ -83,10 +85,11 @@ def CBS(initial_states):
             C.append(validate(path, P.paths))      # C is the set of constraints. Here we add the constraints for each path
 
         C = list(filter(None, C))
-
+        print("Constraints: ", C,flush=True)
         if len(C) < 1:
             print(P.plans)
             print("Found solution")
+            print("Positions: ", P.paths)
             if len(P.plans) == 1:
                 print("One agent")
                 solution = P.plans[0]

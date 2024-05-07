@@ -20,7 +20,8 @@ def atoms(state: 'State'):
         - Set[Tuple[str, Tuple[int, int]]]: A set of tuples representing the state atoms.
         """
         atoms = set()
-        for index, (row, col) in enumerate(zip(state.agent_rows, state.agent_cols)):
+        #print("State agents", state.agents, flush=True)
+        for index, row, col in zip(state.agents,state.agent_rows, state.agent_cols):
             atoms.add((f'AgentAt{index}', (row, col)))
 
         for (row_index, row) in enumerate(state.boxes):
@@ -40,7 +41,7 @@ def atoms(state: 'State'):
 class State:
     _RNG = random.Random(1)
     
-    def __init__(self, agent_rows, agent_cols, boxes, goals, constraints = None):
+    def __init__(self, agent_rows, agent_cols, boxes, goals,agents = None, constraints = None):
         '''
         Constructs an initial state.
         Arguments are not copied, and therefore should not be modified after being passed in.
@@ -65,6 +66,7 @@ class State:
         self.boxes = boxes
         self.parent = None
         self.joint_action = None
+        self.agents = agents
         self.g = 0
         self._hash = None
         self.constraints = constraints if constraints else []
@@ -82,7 +84,7 @@ class State:
         copy_agent_rows = self.agent_rows[:]
         copy_agent_cols = self.agent_cols[:]
         copy_boxes = [row[:] for row in self.boxes]
-        
+        copy_agents = self.agents[:]
         # Apply each action.
         for agent, action in enumerate(joint_action):  
             if action.type is ActionType.NoOp:
@@ -104,12 +106,10 @@ class State:
                 copy_agent_rows[agent] += action.agent_row_delta
                 copy_agent_cols[agent] += action.agent_col_delta
 
-        copy_state = State(copy_agent_rows, copy_agent_cols, copy_boxes, self.goals)
-        
+        copy_state = State(copy_agent_rows, copy_agent_cols, copy_boxes, self.goals, copy_agents, self.constraints)
         copy_state.parent = self
         copy_state.joint_action = joint_action[:]
         copy_state.g = self.g + 1
-        copy_state.constraints = self.constraints
         return copy_state
     
     def is_goal_state(self) -> 'bool':
@@ -167,21 +167,21 @@ class State:
         elif action.type is ActionType.Move:
             destination_row = agent_row + action.agent_row_delta
             destination_col = agent_col + action.agent_col_delta
-            return self.is_free(destination_row, destination_col, self.g + 1)
+            return self.is_free(agent,destination_row, destination_col, self.g + 1)
         
         elif action.type is ActionType.Push:
             destination_row = agent_row + action.agent_row_delta
             destination_col = agent_col + action.agent_col_delta
             box_destination_row =  destination_row + action.box_row_delta
             box_destination_col =  destination_col + action.box_col_delta
-            return self.boxes[destination_row][destination_col] != '' and self.is_free(box_destination_row, box_destination_col, self.g + 1)
+            return self.boxes[destination_row][destination_col] != '' and self.is_free(agent,box_destination_row, box_destination_col, self.g + 1)
         
         elif action.type is ActionType.Pull:
             destination_row = agent_row + action.agent_row_delta
             destination_col = agent_col + action.agent_col_delta
             box_row =  agent_row  - action.box_row_delta
             box_col =  agent_col - action.box_col_delta
-            return self.boxes[box_row][box_col] != '' and self.is_free(destination_row, destination_col, self.g + 1)
+            return self.boxes[box_row][box_col] != '' and self.is_free(agent,destination_row, destination_col, self.g + 1)
                 
     def is_conflicting(self, joint_action: '[Action, ...]') -> 'bool':
         num_agents = len(self.agent_rows)
@@ -220,11 +220,11 @@ class State:
                         
         return False
     
-    def is_free(self, row: 'int', col: 'int', time:'int' = 0) -> 'bool':
+    def is_free(self,agent: 'int', row: 'int', col: 'int', time:'int' = 0) -> 'bool':
         if State.walls[row][col] or self.boxes[row][col] != '' or self.agent_at(row, col) is not None:
             return False
         for constraint in self.constraints:
-            if constraint.time == time and (row, col) in constraint.loc_to:
+            if (constraint.time == time and (row, col) in constraint.loc_to and constraint.agent == self.agents[agent]):
                 return False
         return True
     

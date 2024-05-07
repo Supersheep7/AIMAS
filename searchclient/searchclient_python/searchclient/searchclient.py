@@ -48,7 +48,6 @@ class SearchClient:
                     box_colors[ord(e) - ord('A')] = color
             line = server_messages.readline()
 
-        print(teams)            # example = [('red', '0, A'), ('green', '1, B')]
 
         ''' Now we need to store the server messages in level_lines and goal_level_lines '''
 
@@ -65,7 +64,7 @@ class SearchClient:
             num_cols = max(num_cols, len(line))
             num_rows += 1
             line = server_messages.readline()
-
+        #predefined_constraints = []
         predefined_constraints = [Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(1, 2)], time=1), Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(2, 2)], time=2)]
         intial_goal_line = server_messages.readline()
         goal_level_lines = []
@@ -125,8 +124,7 @@ class SearchClient:
             State.agent_colors = agent_colors
             State.walls = walls
             State.box_colors = box_colors
-            initial_states.append(State(agent_rows, agent_cols, boxes, goals, team_constraints))
-
+            initial_states.append(State(agent_rows, agent_cols, boxes, goals, agents_in_team, team_constraints))
         return initial_states
     
     @staticmethod
