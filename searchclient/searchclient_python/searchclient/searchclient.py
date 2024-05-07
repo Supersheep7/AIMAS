@@ -65,7 +65,7 @@ class SearchClient:
             num_rows += 1
             line = server_messages.readline()
         #predefined_constraints = []
-        predefined_constraints = [Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(1, 2)], time=1), Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(2, 2)], time=2)]
+        predefined_constraints = [Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(1, 7)], time=1), Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(2, 2)], time=2)]
         intial_goal_line = server_messages.readline()
         goal_level_lines = []
         line = intial_goal_line

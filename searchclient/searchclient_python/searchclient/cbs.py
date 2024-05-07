@@ -6,10 +6,13 @@ from action import Action
 
 class Node():
 
-    def __init__(self, states):
+    def __init__(self, states, constraints=[]):
         self.initial_states = states
-        self.constraints = [state.constraints for state in self.initial_states]
+        self.constraints = constraints
+        for state in self.initial_states:
+            state.constraints.extend(self.constraints)
         self.plans, self.paths = plans_from_states(self.initial_states)
+        print("Paths:", self.paths, flush=True)
         self.cost = max([len(plan) for plan in self.plans]) # length of longest solution
 
 def match_length(arr1, arr2):
@@ -38,6 +41,8 @@ def plans_from_states(initial_states):
         plans_repr = []
 
         for num, initial_state in enumerate(initial_states):
+            if initial_state.constraints:
+                print("initial state constraint:", initial_state.constraints[0].loc_to ,initial_state.constraints[0].time, flush=True)
             frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))  
             plan, plan_repr = search(initial_state, frontier)
             plans.append(plan) 
@@ -90,7 +95,7 @@ def validate(plan, plan_list):
                     agent=agent_i,
                     loc_from=(agent_state_previous, box_state_previous),
                     loc_to=(agent_state_current, box_state_current),
-                    time=j
+                    time=j+1
                 ))
 
             # Conflicting box positions
@@ -99,7 +104,7 @@ def validate(plan, plan_list):
                     agent=agent_i,
                     loc_from=(agent_state_previous, box_state_previous),
                     loc_to=(agent_state_current, box_state_current),
-                    time=j
+                    time=j+1
                 ))
 
             # Illegal crossing detection
@@ -119,7 +124,7 @@ def validate(plan, plan_list):
                     agent=agent_i,
                     loc_from=(agent_state_previous, box_state_previous),
                     loc_to=(agent_state_current, box_state_current),
-                    time=j
+                    time=j+1
                 ))
 
             # Agent and Box crossing
@@ -129,31 +134,30 @@ def validate(plan, plan_list):
                     agent=agent_i,
                     loc_from=(agent_state_previous, box_state_previous),
                     loc_to=(agent_state_current, box_state_current),
-                    time=j
+                    time=j+1
                 ))
 
     return constraints  # [ConstraintObject0, ..., ConstraintObjectn]
-
-
 def CBS(initial_states):
     is_single = False
     root = Node(initial_states)
-    open = set()
-    open.add(root)
+    open_set = set()
+    open_set.add(root)
+    closed_set = set()
 
-    while open:
-        P = min(open, key=lambda x: x.cost)
+    while open_set:
+        P = min(open_set, key=lambda x: x.cost)
+        open_set.remove(P)
+        closed_set.add(P)
+
         C = []
-
         for path in P.paths:
-            C.append(validate(path, P.paths))      # C is the set of constraints. Here we add the constraints for each path
+            C.extend(validate(path, P.paths))  # C is the set of constraints. Here we add the constraints for each path
 
-        C = list(filter(None, C))
-        print("Constraints: ", C,flush=True)
-        if len(C) < 1:
+        if not C:
             print(P.plans)
             print("Found solution")
-            print("Positions: ", P.paths)
+            print("Positions:", P.paths)
             if len(P.plans) == 1:
                 print("One agent")
                 solution = P.plans[0]
@@ -161,12 +165,15 @@ def CBS(initial_states):
             else:
                 print("Multiple agents")
                 solution = [list(x) for x in zip(*P.plans)]
-            return solution, is_single       # Found solution, return solution in joint action normal form
+            return solution, is_single  # Found solution, return solution in joint action normal form
         
-        for constraint_set in C:                # Iter through each constraint set (the n of constraints after the validation of a single path)
-            A = Node(initial_states)            # Initialize node
-            A.constraints = P.constraints + constraint_set  
-            A.plans, A.paths = plans_from_states(A.initial_states)
-            A.cost = max(len(plan) for plan in A.plans)
-            open.add(A)
+        for constraint in C:
+            # Create a new set of initial states with the constraints applied
+            new_states = [State(state.agent_rows, state.agent_cols, state.boxes, state.goals, state.agents, state.constraints[:]) for state in P.initial_states]
+            print("Added constraint:",constraint.loc_to,constraint.time , flush=True)
+            A = Node(new_states, P.constraints + [constraint])
+
+            if A not in closed_set:
+                open_set.add(A)
+
     return None

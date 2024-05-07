@@ -70,6 +70,8 @@ class State:
         self.g = 0
         self._hash = None
         self.constraints = constraints if constraints else []
+        if self.constraints:
+            print("State.py constraint:", self.constraints[0].loc_to, flush=True)
         ''' We passed the goals to the state to account for goal decomposition '''
 
         self.goals = goals
@@ -224,7 +226,9 @@ class State:
         if State.walls[row][col] or self.boxes[row][col] != '' or self.agent_at(row, col) is not None:
             return False
         for constraint in self.constraints:
+            print("is_free constraint:", constraint.loc_to, flush=True)
             if (constraint.time == time and (row, col) in constraint.loc_to and constraint.agent == self.agents[agent]):
+                print("is_free Check:", constraint.loc_to, flush=True)
                 return False
         return True
     
