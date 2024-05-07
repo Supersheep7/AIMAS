@@ -70,6 +70,7 @@ def validate(plan, plan_list):
     return constraints    # [ConstraintObject0, ..., ConstraintObjectn]
 
 def CBS(initial_states):
+    is_single = False
     root = Node(initial_states)
     open = set()
     open.add(root)
@@ -89,12 +90,11 @@ def CBS(initial_states):
             if len(P.plans) == 1:
                 print("One agent")
                 solution = P.plans[0]
-                print(solution)
+                is_single = True
             else:
                 print("Multiple agents")
-                solution = [list(x) for x in zip(*P.plans)] 
-                print(solution)
-            return solution       # Found solution, return solution in joint action normal form
+                solution = [list(x) for x in zip(*P.plans)]
+            return solution, is_single       # Found solution, return solution in joint action normal form
         
         for constraint_set in C:                # Iter through each constraint set (the n of constraints after the validation of a single path)
             A = Node(initial_states)            # Initialize node

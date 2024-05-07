@@ -135,30 +135,6 @@ class SearchClient:
         elapsed_time = time.perf_counter() - start_time
         print(status_template.format(len(explored), frontier.size(), len(explored) + frontier.size(), elapsed_time, memory.get_usage(), memory.max_usage), file=sys.stderr, flush=True)
 
-    def validate(plan, plan_list):
-
-        # TO DO: extend validate to also get box conflicts
-
-        agent_i = plan[0][0][0]     # AgentAt0
-        
-        other_plans = [lst for lst in plan_list if lst is not plan]
-        
-        conflicts = []
-
-        for other_plan in other_plans:
-            agent_j = other_plan[0][0][0]   # AgentAt1
-
-            # Pads the shortest plan with copies of the last atom representation (agent still on the goal cell)
-            plan, other_plan = match_length(plan, other_plan)   
-            for j in range(len(plan)):
-                if plan[j][0][1] == other_plan[j][0][1] or plan[j][1][1] == other_plan[j][1][1]:
-                    conflicts.append((agent_i, agent_j, (plan[j][0][1], plan[j][1][1]), j))
-
-        if len(conflicts) < 1:
-            return
-
-        return conflicts    # [(a0, ai, v, t), ..., (a0, aj, v, t)] I think this should still be the tuple to return even for boxes
-
     @staticmethod
     def main(args) -> None:
         # Use stderr to print to the console.
@@ -180,7 +156,7 @@ class SearchClient:
         initial_states = SearchClient.parse_filtered_levels(server_messages)
         #  initial_state = SearchClient.parse_level(server_messages)
         if args.cbs:
-            joint_plan = CBS(initial_states) 
+            joint_plan, is_single = CBS(initial_states) 
 
         # Print plan to server.
         if joint_plan is None:
@@ -190,7 +166,10 @@ class SearchClient:
             print('Found solution of length {}.'.format(len(joint_plan)), file=sys.stderr, flush=True)
             
             for joint_action in joint_plan:
-                print("|".join(a[0].name_ for a in joint_action), flush=True)
+                if is_single:
+                    print("|".join(a.name_ for a in joint_action), flush=True)
+                else:
+                    print("|".join(a[0].name_ for a in joint_action), flush=True)
                 # We must read the server's response to not fill up the stdin buffer and block the server.
                 response = server_messages.readline()
 
