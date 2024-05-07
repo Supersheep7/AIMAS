@@ -29,7 +29,11 @@ class Node():
         self.constraints = constraints
         for state in self.initial_states:
             state.constraints.extend(self.constraints)
+        self.constraints = constraints
+        for state in self.initial_states:
+            state.constraints.extend(self.constraints)
         self.plans, self.paths = plans_from_states(self.initial_states)
+        print("Paths:", self.paths, flush=True)
         self.cost = max([len(plan) for plan in self.plans]) # length of longest solution
 
 def match_length(arr1, arr2):
@@ -53,6 +57,20 @@ def agents_to_rest(plans):
     return plans_with_rest
 
 def validate(plan, plan_list):
+    """
+    Generates constraints based on conflicts between the given plan and other plans in the plan_list,
+    including illegal crossings.
+
+    Parameters:
+    - plan: The plan to validate for conflicts.
+    - plan_list: List of all plans to compare against.
+
+    Returns:
+    - List[Constraint]: A list of constraints identified from conflicts.
+    """
+    agent_i_full = plan[0][0][0]  # Something like 'AgentAt0'
+    agent_i = agent_i_full.split('AgentAt')[-1]  # Extract just the number after 'AgentAt'
+
     """
     Generates constraints based on conflicts between the given plan and other plans in the plan_list,
     including illegal crossings.
@@ -139,14 +157,13 @@ def validate(plan, plan_list):
 def CBS(initial_states):
     is_single = False
     root = Node(initial_states)
-    open = set()
-    open.add(root)
+    open_set = set()
+    open_set.add(root)
+    closed_set = set()
 
     while open:
-        print("LOOPING!!!!!")
         P = min(open, key=lambda x: x.cost)
         C = []
-
         for path in P.paths:
             C.extend(validate(path, P.paths))      # C is the set of constraints. Here we add the constraints for each path
 
@@ -161,10 +178,9 @@ def CBS(initial_states):
             else:
                 print("Multiple agents")
                 solution = [list(x) for x in zip(*P.plans)]
-            return solution, is_single       # Found solution, return solution in joint action normal form
+            return solution, is_single  # Found solution, return solution in joint action normal form
         
         for constraint in C:                # Iter through each constraint set (the n of constraints after the validation of a single path)
-            print("SBOOPING", flush=True)
             print("Added constraint:", constraint.loc_to, constraint.time , flush=True)
             A = Node(initial_states, P.constraints + [constraint])            # Initialize node
             print("Done node")
