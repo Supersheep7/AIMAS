@@ -114,7 +114,7 @@ def validate(plan, plan_list):
                     agent=agent_i,
                     loc_from=(agent_state_previous, box_state_previous),
                     loc_to=(agent_state_current, box_state_current),
-                    time=j
+                    time=j+1
                 ))
 
             # Boxes crossing each other

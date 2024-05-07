@@ -226,7 +226,7 @@ class State:
         if State.walls[row][col] or self.boxes[row][col] != '' or self.agent_at(row, col) is not None:
             return False
         for constraint in self.constraints:
-            print("is_free constraint:", constraint.loc_to, flush=True)
+            print("is_free constraint:", constraint.loc_to,constraint.time, flush=True)
             if (constraint.time == time and (row, col) in constraint.loc_to and constraint.agent == self.agents[agent]):
                 print("is_free Check:", constraint.loc_to, flush=True)
                 return False
