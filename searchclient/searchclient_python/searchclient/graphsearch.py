@@ -54,15 +54,19 @@ def search(initial_state, frontier):
                 print_search_status(explored, frontier)
                 print('Maximum memory usage exceeded.', file=sys.stderr, flush=True)
                 return None
-            
-            print(iterations)
 
             # Your code here...
             if frontier.is_empty():
                 return None
 
             current_state = frontier.pop()
-            
+            current_time = current_state.g+1
+            current_constraints = current_state.constraints
+            constraint_times = [constraint.time for constraint in current_constraints]
+            is_constraint_step = False
+            if current_time in constraint_times:
+                is_constraint_step = True
+
             if current_state.is_goal_state():
             # Solution found
                 print_search_status(explored, frontier)
@@ -71,9 +75,12 @@ def search(initial_state, frontier):
 
             explored.add(current_state)
 
-            for child_state in current_state.get_expanded_states():
-                if not frontier.contains(child_state) and child_state not in explored:
+            expanded_states = current_state.get_expanded_states()
+
+            for child_state in expanded_states:
+                if (child_state, is_constraint_step) not in explored:
                     frontier.add(child_state)
+                    explored.add((child_state, is_constraint_step))
             
             # print_search_status(explored, frontier)
 

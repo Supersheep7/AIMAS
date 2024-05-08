@@ -158,8 +158,8 @@ def CBS(initial_states):
     open_set.add(root)
     closed_set = set()
 
-    while open:
-        P = min(open, key=lambda x: x.cost)
+    while open_set:
+        P = min(open_set, key=lambda x: x.cost)
         C = []
         for path in P.paths:
             C.extend(validate(path, P.paths))      # C is the set of constraints. Here we add the constraints for each path
@@ -177,10 +177,15 @@ def CBS(initial_states):
                 solution = [list(x) for x in zip(*P.plans)]
             return solution, is_single  # Found solution, return solution in joint action normal form
         
+        new_constraints = P.constraints
+
         for constraint in C:                # Iter through each constraint set (the n of constraints after the validation of a single path)
-            print("Added constraint:", constraint.loc_to, constraint.time , flush=True)
-            A = Node(initial_states, P.constraints + [constraint])            # Initialize node
-            print("Done node")
-            open.add(A)
+            print("Added constraint:", constraint.loc_to, constraint.time, "for worker", constraint.agent, flush=True)
+            new_constraints.append(constraint)
+            # Initialize node
+        
+        A = Node(initial_states, new_constraints)
+        open_set.add(A)
+        print("Done node")
 
     return None
