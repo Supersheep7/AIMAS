@@ -81,6 +81,8 @@ class SearchClient:
         initial_goal_line = server_messages.readline()
         goal_level_lines = []
         line = initial_goal_line
+        predefined_constraints = [Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(1, 6)], time=2)]
+
         
         while not line.startswith('#'):
             goal_level_lines.append(line)
@@ -109,7 +111,6 @@ class SearchClient:
             movable = team[2]
             for agent in agents:
                 workers.append(Worker(color, agent, movable))
-
         walls = [[False for _ in range(num_cols)] for _ in range(num_rows)]
         
         boxes_to_assign = []
@@ -178,7 +179,7 @@ class SearchClient:
         for worker in workers:
             
             print("Name",  worker.name, "Boxes", worker.boxes, "Goals", worker.goals)
-            initial_states.append(State(worker.agent_rows, worker.agent_cols, worker.boxes, worker.goals, worker.name))
+            initial_states.append(State(worker.agent_rows, worker.agent_cols, worker.boxes, worker.goals, worker.name, predefined_constraints))
 
         return initial_states
     

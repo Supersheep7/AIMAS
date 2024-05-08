@@ -11,7 +11,8 @@ def plans_from_states(initial_states):
 
         for num, initial_state in enumerate(initial_states):
             frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))
-            plan, plan_repr = search(initial_state, frontier)
+            searching = search(initial_state, frontier)
+            plan, plan_repr = searching
             plans.append(plan) 
             plans_repr.append(plan_repr)
             print("Ended search for initial state number", num)
@@ -24,11 +25,11 @@ def plans_from_states(initial_states):
 
 class Node():
 
-    def __init__(self, states, constraints = []):
+    def __init__(self, states, constraints = None):
         self.initial_states = states
-        self.constraints = constraints
+        self.constraints = constraints if constraints is not None else []
         for state in self.initial_states:
-            state.constraints.extend(self.constraints)
+            state.constraints = list(set(state.constraints + self.constraints))  # Remove duplicates
         self.plans, self.paths = plans_from_states(self.initial_states)
         print("Paths:", self.paths, flush=True)
         self.cost = max([len(plan) for plan in self.plans]) # length of longest solution
@@ -156,10 +157,11 @@ def CBS(initial_states):
     root = Node(initial_states)
     open_set = set()
     open_set.add(root)
-    closed_set = set()
+ 
 
     while open_set:
         P = min(open_set, key=lambda x: x.cost)
+        open_set.remove(P)
         C = []
         for path in P.paths:
             C.extend(validate(path, P.paths))      # C is the set of constraints. Here we add the constraints for each path
@@ -177,15 +179,13 @@ def CBS(initial_states):
                 solution = [list(x) for x in zip(*P.plans)]
             return solution, is_single  # Found solution, return solution in joint action normal form
         
-        new_constraints = P.constraints
 
-        for constraint in C:                # Iter through each constraint set (the n of constraints after the validation of a single path)
+        for constraint in C:          
+            new_constraints = P.constraints + [constraint]
             print("Added constraint:", constraint.loc_to, constraint.time, "for worker", constraint.agent, flush=True)
-            new_constraints.append(constraint)
-            # Initialize node
-        
-        A = Node(initial_states, new_constraints)
-        open_set.add(A)
+            A = Node(P.initial_states, new_constraints)
+            if A not in open_set:
+                open_set.add(A)
         print("Done node")
 
     return None
