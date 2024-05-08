@@ -59,30 +59,41 @@ def search(initial_state, frontier):
             if frontier.is_empty():
                 return None
 
+            is_constrained = False
             current_state = frontier.pop()
             current_time = current_state.g+1
             current_constraints = current_state.constraints
             constraint_times = [constraint.time for constraint in current_constraints]
-            is_constraint_step = False
+            v = None
+            t = None
+            if current_constraints:
+                v = current_constraints[0].loc_to[0]
+                t = constraint_times[0]
+            is_constraint_step = None
             if current_time in constraint_times:
-                is_constraint_step = True
-
+                is_constraint_step = current_time
+            coords = (current_state.agent_rows, current_state.agent_cols)
+            coords = (coords[0][0], coords[1][0])
+            if v is not None and t is not None:
+                if v == coords and t == current_time:
+                    is_constrained == True
+                    
             if current_state.is_goal_state():
             # Solution found
                 print_search_status(explored, frontier)
                 plan, plan_repr = current_state.extract_plan()
                 return plan, plan_repr         
 
-            explored.add(current_state)
-
+            # explored.add(current_state)
+            
             expanded_states = current_state.get_expanded_states()
-
             for child_state in expanded_states:
                 if (child_state, is_constraint_step) not in explored:
                     frontier.add(child_state)
                     explored.add((child_state, is_constraint_step))
             
             # print_search_status(explored, frontier)
+        
 
 def print_search_status(explored, frontier):
     status_template = '#Expanded: {:8,}, #Frontier: {:8,}, #Generated: {:8,}, Time: {:3.3f} s\n[Alloc: {:4.2f} MB, MaxAlloc: {:4.2f} MB]'

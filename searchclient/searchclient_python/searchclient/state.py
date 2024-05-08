@@ -3,11 +3,18 @@ import random
 from action import Action, ActionType
 
 class Constraint:
-    def __init__(self, agent, loc_from, loc_to, time):
+    def __init__(self, agent, loc_to, time):
         self.agent = agent
-        self.loc_from = loc_from  # Assuming loc_from is a list of starting locations
         self.loc_to = loc_to      # Assuming loc_to is a list of ending locations
         self.time = time
+
+class Conflict:
+    def __init__(self, ai, aj, v, t):
+        self.ai = ai
+        self.aj = aj 
+        self.v = v
+        self.t = t
+        self.agents = [ai, aj]
 
 def atoms(state: 'State'):
         """

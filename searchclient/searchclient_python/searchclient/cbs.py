@@ -1,8 +1,9 @@
-from state import State, Constraint
+from state import State, Constraint, Conflict
 from frontier import FrontierBestFirstWidth
 from heuristic import HeuristicBFWS
 from graphsearch import search
 from action import Action
+import numpy as np
 
 def plans_from_states(initial_states):
 
@@ -16,7 +17,7 @@ def plans_from_states(initial_states):
             plans_repr.append(plan_repr)
             print("Ended search for initial state number", num)
             print()
-            print("Plan extracted.")
+            print("Plan extracted. Plan:", plan)
             print()
 
         plans = agents_to_rest(plans)
@@ -24,14 +25,21 @@ def plans_from_states(initial_states):
 
 class Node():
 
-    def __init__(self, states, constraints = []):
+    def __init__(self, states, single_agent = None, constraints = []):
         self.initial_states = states
         self.constraints = constraints
-        for state in self.initial_states:
-            state.constraints.extend(self.constraints)
-        self.plans, self.paths = plans_from_states(self.initial_states)
-        print("Paths:", self.paths, flush=True)
-        self.cost = max([len(plan) for plan in self.plans]) # length of longest solution
+
+        if single_agent is not None:
+            # Select worker for a singleton search
+            state = next((state for state in self.initial_states if state.worker_name == single_agent), None)
+            self.plans, self.paths = plans_from_states([state])
+            state.constraints = self.constraints
+        else:
+            for state in self.initial_states:
+                self.plans, self.paths = plans_from_states(self.initial_states)
+                state.constraints = self.constraints
+
+        self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
 
 def match_length(arr1, arr2):
     len_diff = abs(len(arr2) - len(arr1))
@@ -63,106 +71,84 @@ def validate(plan, plan_list):
     - plan_list: List of all plans to compare against.
 
     Returns:
-    - List[Constraint]: A list of constraints identified from conflicts.
-    """
-    agent_i_full = plan[0][0][0]  # Something like 'AgentAt0'
-    agent_i = agent_i_full.split('AgentAt')[-1]  # Extract just the number after 'AgentAt'
-
-    """
-    Generates constraints based on conflicts between the given plan and other plans in the plan_list,
-    including illegal crossings.
-
-    Parameters:
-    - plan: The plan to validate for conflicts.
-    - plan_list: List of all plans to compare against.
-
-    Returns:
-    - List[Constraint]: A list of constraints identified from conflicts.
+    - Conflict: First conflict found during the validation process
     """
     agent_i_full = plan[0][0][0]  # Something like 'AgentAt0'
     agent_i = agent_i_full.split('AgentAt')[-1]  # Extract just the number after 'AgentAt'
 
     other_plans = [lst for lst in plan_list if lst is not plan]
-    constraints = []
 
     for other_plan in other_plans:
+
+        agent_j_full = other_plan[0][0][0]
+        agent_j = agent_j_full.split('AgentAt')[-1]
+
         # Ensure both plans are of equal length
         plan, other_plan = match_length(plan, other_plan)
 
-        for j in range(1, len(plan)):
+        for j in range(1, len(plan)-1):
             # Get current and previous states for both plans
             agent_state_current = plan[j][0][1]
             agent_state_previous = plan[j - 1][0][1]
             box_state_current = plan[j][1][1] if len(plan[j]) > 1 else None
             box_state_previous = plan[j - 1][1][1] if len(plan[j - 1]) > 1 else None
+            agent_state_next = plan[j+1][0][1]
+            box_state_next = plan[j+1][1][1]
 
             other_agent_state_current = other_plan[j][0][1]
             other_agent_state_previous = other_plan[j - 1][0][1]
             other_box_state_current = other_plan[j][1][1] if len(other_plan[j]) > 1 else None
             other_box_state_previous = other_plan[j - 1][1][1] if len(other_plan[j - 1]) > 1 else None
+            other_agent_state_next = other_plan[j+1][0][1]
+            other_box_state_next = other_plan[j+1][1][1]
+            t=j+1
 
             # Conflicting agent positions
             if agent_state_current == other_agent_state_current:
-                constraints.append(Constraint(
-                    agent=agent_i,
-                    loc_from=(agent_state_previous, box_state_previous),
-                    loc_to=(agent_state_current, box_state_current),
-                    time=j+1
-                ))
+                conflict = Conflict(agent_i, agent_j, agent_state_current, t)
+                return conflict
 
             # Conflicting box positions
             if box_state_current is not None and box_state_current == other_box_state_current:
-                constraints.append(Constraint(
-                    agent=agent_i,
-                    loc_from=(agent_state_previous, box_state_previous),
-                    loc_to=(agent_state_current, box_state_current),
-                    time=j+1
-                ))
+                conflict = Conflict(agent_i, agent_j, box_state_current, t)
+                return conflict
 
             # Illegal crossing detection
             # Agents crossing each other
             if agent_state_current == other_agent_state_previous and agent_state_previous == other_agent_state_current:
-                constraints.append(Constraint(
-                    agent=agent_i,
-                    loc_from=(agent_state_previous, box_state_previous),
-                    loc_to=(agent_state_current, box_state_current),
-                    time=j+1
-                ))
+                conflict = Conflict(agent_i, agent_j, agent_state_current, t)
+                return conflict
+
 
             # Boxes crossing each other
             if box_state_current is not None and box_state_previous is not None and \
                     box_state_current == other_box_state_previous and box_state_previous == other_box_state_current:
-                constraints.append(Constraint(
-                    agent=agent_i,
-                    loc_from=(agent_state_previous, box_state_previous),
-                    loc_to=(agent_state_current, box_state_current),
-                    time=j+1
-                ))
+                conflict = Conflict(agent_i, agent_j, box_state_current, t)
+                return conflict
 
             # Agent and Box crossing
             if box_state_current is not None and \
                     (agent_state_current == other_box_state_previous and agent_state_previous == other_box_state_current):
-                constraints.append(Constraint(
-                    agent=agent_i,
-                    loc_from=(agent_state_previous, box_state_previous),
-                    loc_to=(agent_state_current, box_state_current),
-                    time=j+1
-                ))
+                conflict = Conflict(agent_i, agent_j, agent_state_current, t)
+                return conflict
 
-    return constraints    # [ConstraintObject0, ..., ConstraintObjectn]
+    return None    # [ConstraintObject0, ..., ConstraintObjectn]
 
 def CBS(initial_states):
     is_single = False
     root = Node(initial_states)
     open_set = set()
     open_set.add(root)
-    closed_set = set()
 
     while open_set:
         P = min(open_set, key=lambda x: x.cost)
-        C = []
+        print("Opening node with cost", P.cost)
+        C = None
+
         for path in P.paths:
-            C.extend(validate(path, P.paths))      # C is the set of constraints. Here we add the constraints for each path
+            C = validate(path, P.paths)     
+            if C is not None:
+                break
 
         if not C:
             print(P.plans)
@@ -176,16 +162,17 @@ def CBS(initial_states):
                 print("Multiple agents")
                 solution = [list(x) for x in zip(*P.plans)]
             return solution, is_single  # Found solution, return solution in joint action normal form
-        
-        new_constraints = P.constraints
 
-        for constraint in C:                # Iter through each constraint set (the n of constraints after the validation of a single path)
-            print("Added constraint:", constraint.loc_to, constraint.time, "for worker", constraint.agent, flush=True)
-            new_constraints.append(constraint)
-            # Initialize node
-        
-        A = Node(initial_states, new_constraints)
-        open_set.add(A)
-        print("Done node")
+        for agent_i in C.agents:
+            A = Node(initial_states, single_agent=agent_i)
+
+            A.constraints = P.constraints.append(Constraint(agent_i, C.v, C.t))
+            A.plans = P.plans 
+            A.paths = P.paths
+            # TODO: Update solution by invoking search for agent_i
+            A.cost = sum([len(plan) for plan in A.plans])
+            if A.cost < np.inf:
+                open_set.add(A)
+            
 
     return None

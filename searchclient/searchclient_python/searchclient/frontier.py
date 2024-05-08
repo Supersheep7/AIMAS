@@ -115,7 +115,7 @@ class FrontierBestFirstWidth(Frontier):
         super().__init__()
         self.heuristic = heuristic
         self.queue = []
-        self.set = set()
+        self.set = []
         self.counter = 0
     
     def add(self, state: 'State'):
@@ -125,7 +125,7 @@ class FrontierBestFirstWidth(Frontier):
         priority = self.heuristic.f(state)
         heappush(self.queue, (priority, self.counter, state))
         self.counter += 1
-        self.set.add(state)
+        self.set.append(state)
     
     def pop(self) -> 'State':
         if not self.queue:
