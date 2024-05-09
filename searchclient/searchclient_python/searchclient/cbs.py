@@ -4,6 +4,7 @@ from heuristic import HeuristicBFWS
 from graphsearch import search
 from action import Action
 import numpy as np
+import copy
 
 def plans_from_states(initial_states):
 
@@ -33,12 +34,15 @@ class Node():
         if single_agent is not None:
             # Select worker for a singleton search
             state = next((state for state in self.initial_states if state.worker_name == single_agent), None)
-            self.plans, self.paths = plans_from_states([state])
-            state.constraints = self.constraints
+            state = [state]
+            self.plans, self.paths = plans_from_states(state)
+            state[0].constraints = self.constraints
+            for constraint in self.constraints:
+                print(constraint.loc_to)
         else:
             for state in self.initial_states:
-                self.plans, self.paths = plans_from_states(self.initial_states)
                 state.constraints = self.constraints
+            self.plans, self.paths = plans_from_states(self.initial_states)
 
         self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
 
@@ -144,6 +148,7 @@ def CBS(initial_states):
     while open_set:
         P = min(open_set, key=lambda x: x.cost)
         print("Opening node with cost", P.cost)
+        print("Constraint of the node:", P.constraints)
         C = None
 
         for path in P.paths:
@@ -156,24 +161,24 @@ def CBS(initial_states):
             print("Found solution")
             print("Positions:", P.paths)
             if len(P.plans) == 1:
-                print("One agent")
+                print("Single agent")
                 solution = P.plans[0]
                 is_single = True
             else:
-                print("Multiple agents")
+                print("Multi agent")
                 solution = [list(x) for x in zip(*P.plans)]
             return solution, is_single  # Found solution, return solution in joint action normal form
 
         for agent_i in C.agents:
-            A = Node(initial_states, single_agent=agent_i)
-
-            A.constraints = P.constraints.append(Constraint(agent_i, C.v, C.t))
-            A.plans = P.plans 
-            A.paths = P.paths
-            # TODO: Update solution by invoking search for agent_i
+            A = copy.deepcopy(P)
+            A.agent = agent_i
+            A.constraints.append(Constraint(agent_i, C.v, C.t))
+            print("A.constraints:", A.constraints)
+            for constraint in A.constraints:
+                print(constraint.loc_to)
+            A.plans, A.paths = plans_from_states(A.initial_states)
             A.cost = sum([len(plan) for plan in A.plans])
             if A.cost < np.inf:
                 open_set.add(A)
-            
 
     return None

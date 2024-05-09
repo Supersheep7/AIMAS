@@ -81,7 +81,6 @@ class SearchClient:
         initial_goal_line = server_messages.readline()
         goal_level_lines = []
         line = initial_goal_line
-        predefined_constraints = [Constraint(agent='0', loc_from=[(1, 2)], loc_to=[(1, 6)], time=2)]
 
         
         while not line.startswith('#'):
@@ -178,8 +177,8 @@ class SearchClient:
             
         for worker in workers:
             
-            print("Name",  worker.name, "Boxes", worker.boxes, "Goals", worker.goals)
-            initial_states.append(State(worker.agent_rows, worker.agent_cols, worker.boxes, worker.goals, worker.name, predefined_constraints))
+            print("Initialized state for worker Name",  worker.name)
+            initial_states.append(State(worker.agent_rows, worker.agent_cols, worker.boxes, worker.goals, worker.name))
 
         return initial_states
     
