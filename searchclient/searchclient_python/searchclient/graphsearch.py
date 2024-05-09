@@ -80,7 +80,7 @@ def search(initial_state, frontier):
             
             for child_state in expanded_states:
                # print("Child state:",child_state.agent_cols, child_state.agent_rows, current_time-1, flush=True)
-                if (child_state, is_constraint_step) not in explored:
+                if (child_state, is_constraint_step) not in explored and child_state.constraint_step == False:
                 #    print("Added to frontier", flush=True)
                     frontier.add(child_state)
                     explored.add((child_state, is_constraint_step))

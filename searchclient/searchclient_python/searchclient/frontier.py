@@ -123,7 +123,6 @@ class FrontierBestFirstWidth(Frontier):
         self.heuristic.get_w(self.queue, state)
         # Here priority is <w, h>         
         priority = self.heuristic.f(state)
-        print(priority)
         heappush(self.queue, (priority, self.counter, state))
         self.counter += 1
         self.set.append(state)

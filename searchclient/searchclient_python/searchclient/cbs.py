@@ -17,10 +17,10 @@ def plans_from_states(initial_states):
             plan, plan_repr = searching
             plans.append(plan) 
             plans_repr.append(plan_repr)
-            # print("Ended search for initial state number", num)
-            # print()
-            # print("Plan extracted. Plan:", plan)
-            # print()
+            print("Ended search for initial state number", num)
+            print()
+            print("Plan extracted. Plan:", plan)
+            print()
 
         plans = agents_to_rest(plans)
         return plans, plans_repr
@@ -36,8 +36,6 @@ class Node():
             state = [state]
             self.plans, self.paths = plans_from_states(state)
             state[0].constraints = self.constraints
-            for constraint in self.constraints:
-                print(constraint.loc_to)
         else:
             for state in self.initial_states:
                 state.constraints = self.constraints
@@ -48,6 +46,8 @@ class Node():
     def get_single_search(self, single_agent):
         state = next((state for state in self.initial_states if state.worker_name == single_agent), None)
         state.constraints = self.constraints
+        for constraint in state.constraints:
+            print(constraint.loc_to)
         state = [state]
         return plans_from_states(state)
 
@@ -154,6 +154,7 @@ def CBS(initial_states):
 
     while open_set:
         P = min(open_set, key=lambda x: x.cost)
+        open_set.remove(P)
         print("Opening node with cost", P.cost)
         print("Length of path:", len(P.paths[0]))
         print("Constraint of the node:", P.constraints)
@@ -188,9 +189,7 @@ def CBS(initial_states):
             path_i = path_i[0]
             A.plans[int(agent_i)] = plan_i
             A.paths[int(agent_i)] = path_i
-            A.cost = sum([len(plan) for plan in A.plans])
-            print(A.cost)
-            if A.cost < np.inf:
-                open_set.add(A)
+            A.cost = sum([len(plan) for plan in A.plans]) + int(agent_i)
+            open_set.add(A)
 
     return None
