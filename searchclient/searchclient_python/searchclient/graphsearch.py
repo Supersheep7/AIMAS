@@ -60,7 +60,14 @@ def search(initial_state, frontier):
                 return None
 
             current_state = frontier.pop()
-                    
+            current_time = current_state.g+1
+            current_constraints = current_state.constraints
+            constraint_times = [constraint.time for constraint in current_constraints]
+            # print("Current constraint times:", constraint_times, flush=True)
+            # print("Current constraint locations:", [(constraint.loc_from, constraint.loc_to) for constraint in current_constraints], flush=True)
+            is_constraint_step = None
+            if current_time in constraint_times:
+                is_constraint_step = current_time
             if current_state.is_goal_state():
             # Solution found
                 print_search_status(explored, frontier)
@@ -69,13 +76,14 @@ def search(initial_state, frontier):
 
             expanded_states = current_state.get_expanded_states()
 
-            explored.add(current_state)
+            #explored.add(current_state)
             
             for child_state in expanded_states:
                # print("Child state:",child_state.agent_cols, child_state.agent_rows, current_time-1, flush=True)
-                if not frontier.contains(child_state) and child_state.constraint_step == False:
+                if (child_state, is_constraint_step) not in explored:
                 #    print("Added to frontier", flush=True)
                     frontier.add(child_state)
+                    explored.add((child_state, is_constraint_step))
                                 
             # print_search_status(explored, frontier)
         
