@@ -17,10 +17,10 @@ def plans_from_states(initial_states):
             plan, plan_repr = searching
             plans.append(plan) 
             plans_repr.append(plan_repr)
-            print("Ended search for initial state number", num)
-            print()
-            print("Plan extracted. Plan:", plan)
-            print()
+            # print("Ended search for initial state number", num)
+            # print()
+            # print("Plan extracted. Plan:", plan)
+            # print()
 
         plans = agents_to_rest(plans)
         return plans, plans_repr
@@ -30,7 +30,6 @@ class Node():
     def __init__(self, states, single_agent = None, constraints = []):
         self.initial_states = states
         self.constraints = constraints
-
         if single_agent is not None:
             # Select worker for a singleton search
             state = next((state for state in self.initial_states if state.worker_name == single_agent), None)
@@ -45,6 +44,12 @@ class Node():
             self.plans, self.paths = plans_from_states(self.initial_states)
 
         self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
+    
+    def get_single_search(self, single_agent):
+        state = next((state for state in self.initial_states if state.worker_name == single_agent), None)
+        state.constraints = self.constraints
+        state = [state]
+        return plans_from_states(state)
 
 def match_length(arr1, arr2):
     len_diff = abs(len(arr2) - len(arr1))
@@ -78,7 +83,9 @@ def validate(plan, plan_list):
     Returns:
     - Conflict: First conflict found during the validation process
     """
+    # print("VALIDATE", plan)
     agent_i_full = plan[0][0][0]  # Something like 'AgentAt0'
+    # print(agent_i_full)
     agent_i = agent_i_full.split('AgentAt')[-1]  # Extract just the number after 'AgentAt'
 
     other_plans = [lst for lst in plan_list if lst is not plan]
@@ -148,6 +155,7 @@ def CBS(initial_states):
     while open_set:
         P = min(open_set, key=lambda x: x.cost)
         print("Opening node with cost", P.cost)
+        print("Length of path:", len(P.paths[0]))
         print("Constraint of the node:", P.constraints)
         C = None
 
@@ -173,11 +181,15 @@ def CBS(initial_states):
             A = copy.deepcopy(P)
             A.agent = agent_i
             A.constraints.append(Constraint(agent_i, C.v, C.t))
-            print("A.constraints:", A.constraints)
             for constraint in A.constraints:
-                print(constraint.loc_to)
-            A.plans, A.paths = plans_from_states(A.initial_states)
+                print(constraint.agent, constraint.loc_to, constraint.time)
+            plan_i, path_i = A.get_single_search(agent_i)
+            plan_i = plan_i[0]
+            path_i = path_i[0]
+            A.plans[int(agent_i)] = plan_i
+            A.paths[int(agent_i)] = path_i
             A.cost = sum([len(plan) for plan in A.plans])
+            print(A.cost)
             if A.cost < np.inf:
                 open_set.add(A)
 

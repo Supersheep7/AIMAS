@@ -212,6 +212,7 @@ class HeuristicBFWS(Heuristic):
     '''
 
     def f(self, state: 'State') -> 'int':
+        print(self.h(state))
         return (self.w, self.h(state))
     
     def __repr__(self):

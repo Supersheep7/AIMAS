@@ -113,8 +113,9 @@ class State:
         copy_state.g = self.g + 1
         copy_state.constraints = self.constraints[:]
         copy_state.constraint_step = False
-        if copy_state.constraints:
-            if copy_state.g == copy_state.constraints[0].time:
+        for constraint in copy_state.constraints:
+            if (constraint.time == copy_state.g and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to and constraint.agent == self.worker_name):
+                print("This state should be discarded from the search")
                 copy_state.constraint_step = True
         return copy_state
     
@@ -229,10 +230,10 @@ class State:
     def is_free(self, row: 'int', col: 'int', time:'int' = 0) -> 'bool':
         if State.walls[row][col] or self.boxes[row][col] != '' or self.agent_at(row, col) is not None:
             return False
-        for constraint in self.constraints:
-            if (constraint.time == time and (row, col) in constraint.loc_to and constraint.agent == self.worker_name):
-                print("At time", constraint.time, "This location is NOT free:", constraint.loc_to, flush=True)
-                return False
+        # for constraint in self.constraints:
+        #     if (constraint.time == time and (row, col) == constraint.loc_to and constraint.agent == self.worker_name):
+        #         print("At time", constraint.time, "This location is NOT free:", constraint.loc_to, "Current state should be discarded", flush=True )
+        #         return False
         return True
     
     def agent_at(self, row: 'int', col: 'int') -> 'char':
