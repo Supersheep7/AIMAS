@@ -12,7 +12,8 @@ def plans_from_states(initial_states):
 
         for num, initial_state in enumerate(initial_states):
             frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))
-            plan, plan_repr = search(initial_state, frontier)
+            searching = search(initial_state, frontier)
+            plan, plan_repr = searching
             plans.append(plan) 
             plans_repr.append(plan_repr)
             print("Ended search for initial state number", num)
@@ -25,6 +26,7 @@ def plans_from_states(initial_states):
 
 class Node():
 
+<<<<<<< HEAD
     def __init__(self, states, single_agent = None, constraints = []):
         self.initial_states = states
         self.constraints = constraints
@@ -40,6 +42,16 @@ class Node():
                 state.constraints = self.constraints
 
         self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
+=======
+    def __init__(self, states, constraints = None):
+        self.initial_states = states
+        self.constraints = constraints if constraints is not None else []
+        for state in self.initial_states:
+            state.constraints = list(set(state.constraints + self.constraints))  # Remove duplicates
+        self.plans, self.paths = plans_from_states(self.initial_states)
+        print("Paths:", self.paths, flush=True)
+        self.cost = max([len(plan) for plan in self.plans]) # length of longest solution
+>>>>>>> 6ecc4ccd76249ce350be6b1d66139653434aa4d3
 
 def match_length(arr1, arr2):
     len_diff = abs(len(arr2) - len(arr1))
@@ -139,12 +151,21 @@ def CBS(initial_states):
     root = Node(initial_states)
     open_set = set()
     open_set.add(root)
+<<<<<<< HEAD
 
     while open_set:
         P = min(open_set, key=lambda x: x.cost)
         print("Opening node with cost", P.cost)
         C = None
 
+=======
+ 
+
+    while open_set:
+        P = min(open_set, key=lambda x: x.cost)
+        open_set.remove(P)
+        C = []
+>>>>>>> 6ecc4ccd76249ce350be6b1d66139653434aa4d3
         for path in P.paths:
             C = validate(path, P.paths)     
             if C is not None:
@@ -162,6 +183,7 @@ def CBS(initial_states):
                 print("Multiple agents")
                 solution = [list(x) for x in zip(*P.plans)]
             return solution, is_single  # Found solution, return solution in joint action normal form
+<<<<<<< HEAD
 
         for agent_i in C.agents:
             A = Node(initial_states, single_agent=agent_i)
@@ -174,5 +196,16 @@ def CBS(initial_states):
             if A.cost < np.inf:
                 open_set.add(A)
             
+=======
+        
+
+        for constraint in C:          
+            new_constraints = P.constraints + [constraint]
+            print("Added constraint:", constraint.loc_to, constraint.time, "for worker", constraint.agent, flush=True)
+            A = Node(P.initial_states, new_constraints)
+            if A not in open_set:
+                open_set.add(A)
+        print("Done node")
+>>>>>>> 6ecc4ccd76249ce350be6b1d66139653434aa4d3
 
     return None

@@ -55,8 +55,9 @@ def search(initial_state, frontier):
                 print('Maximum memory usage exceeded.', file=sys.stderr, flush=True)
                 return None
 
-            # Your code here...
+            
             if frontier.is_empty():
+                print("Big bomboclat", flush=True)
                 return None
 
             is_constrained = False
@@ -88,9 +89,12 @@ def search(initial_state, frontier):
             
             expanded_states = current_state.get_expanded_states()
             for child_state in expanded_states:
+               # print("Child state:",child_state.agent_cols, child_state.agent_rows, current_time-1, flush=True)
                 if (child_state, is_constraint_step) not in explored:
+                #    print("Added to frontier", flush=True)
                     frontier.add(child_state)
                     explored.add((child_state, is_constraint_step))
+
             
             # print_search_status(explored, frontier)
         
