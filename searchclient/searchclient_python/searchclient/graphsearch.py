@@ -56,7 +56,7 @@ def search(initial_state, frontier):
                 return None
 
             if frontier.is_empty():
-                print("Big bomboclat")
+                print("Big bomboclat for", initial_state.worker_name)
                 return None
 
             current_state = frontier.pop()
@@ -68,16 +68,15 @@ def search(initial_state, frontier):
             is_constraint_step = None
             if current_time in constraint_times:
                 is_constraint_step = current_time
+                print(current_time)
             if current_state.is_goal_state():
             # Solution found
-                print_search_status(explored, frontier)
+                print("Goal state")
                 plan, plan_repr = current_state.extract_plan()
                 return plan, plan_repr         
 
             expanded_states = current_state.get_expanded_states()
 
-            #explored.add(current_state)
-            
             for child_state in expanded_states:
                # print("Child state:",child_state.agent_cols, child_state.agent_rows, current_time-1, flush=True)
                 if (child_state, is_constraint_step) not in explored and child_state.constraint_step == False:

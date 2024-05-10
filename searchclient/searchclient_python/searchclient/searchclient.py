@@ -3,7 +3,7 @@ import sys
 import time
 import memory
 from color import Color
-from state import State, Constraint
+from state import State
 from cbs import CBS
 
 def match_length(arr1, arr2):
@@ -132,7 +132,9 @@ class SearchClient:
             for row, line in enumerate(goal_level_lines):
                 for col, c in enumerate(line):
                         if c.isalpha():
-                            goals_to_assign.append((c, (row, col)))       
+                            goals_to_assign.append((c, (row, col)))  
+                        elif c.isdigit():
+                            goals_to_assign.append((c, (row, col)))     
             
         # Here we have populated boxes to assign and goals to assign
         current_worker_index = 0
@@ -142,17 +144,18 @@ class SearchClient:
             chosen_worker = None
 
             for _ in range(len(workers)):
-                if goal[0] in workers[current_worker_index].movable:
+                if goal[0] in workers[current_worker_index].movable or goal[0] == workers[current_worker_index].name:
                     chosen_worker = workers[current_worker_index]
                     break
+                
                 current_worker_index = (current_worker_index + 1) % len(workers)
 
             chosen_worker.goals[row][col] = goal[0]
-            
-            box_for_goal = next(box for box in boxes_to_assign if box[0] == goal[0])
-            boxes_to_assign.remove(box_for_goal)
-            row, col = box_for_goal[1]
-            chosen_worker.boxes[row][col] = box_for_goal[0]
+            if goal[0].isalpha():
+                box_for_goal = next(box for box in boxes_to_assign if box[0] == goal[0])
+                boxes_to_assign.remove(box_for_goal)
+                row, col = box_for_goal[1]
+                chosen_worker.boxes[row][col] = box_for_goal[0]
 
         current_worker_index = 0
 

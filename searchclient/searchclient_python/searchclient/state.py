@@ -2,12 +2,6 @@ import random
 
 from action import Action, ActionType
 
-class Constraint:
-    def __init__(self, agent, loc_to, time):
-        self.agent = agent
-        self.loc_to = loc_to      # Assuming loc_to is a list of ending locations
-        self.time = time
-
 class Conflict:
     def __init__(self, ai, aj, v, t):
         self.ai = ai
@@ -15,6 +9,22 @@ class Conflict:
         self.v = v
         self.t = t
         self.agents = [ai, aj]
+
+class EdgeConflict(Conflict):
+    def __init__(self, ai, aj, v, v1, t):
+        super().__init__(ai, aj, v, t)
+        self.v1 = v1
+
+class Constraint:
+    def __init__(self, agent, loc_to, time):
+        self.agent = agent
+        self.loc_to = loc_to      
+        self.time = time
+
+class EdgeConstraint(Constraint):
+    def __init__(self, agent, loc_from, loc_to, time):
+        super().__init__(agent, loc_to, time)
+        self.loc_from = loc_from
 
 def atoms(state: 'State'):
         """
@@ -114,18 +124,23 @@ class State:
         copy_state.constraints = self.constraints[:]
         copy_state.constraint_step = False
         for constraint in copy_state.constraints:
-            if (constraint.time == copy_state.g and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to and constraint.agent == self.worker_name):
-                print("This state should be discarded from the search")
-                copy_state.constraint_step = True
+            if isinstance(constraint, EdgeConstraint):
+                if constraint.time == copy_state.g and (self.agent_rows[0], self.agent_cols[0]) == constraint.loc_from \
+                    and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to:
+                    copy_state.constraint_step = True
+            elif not isinstance(constraint, EdgeConstraint):
+                if (constraint.time == copy_state.g and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to):
+                    copy_state.constraint_step = True
         return copy_state
     
     def is_goal_state(self) -> 'bool':
+        
         for row in range(len(self.goals)):
             for col in range(len(self.goals[row])):
                 goal = self.goals[row][col]
                 if 'A' <= goal <= 'Z' and self.boxes[row][col] != goal:
                     return False
-                elif '0' <= goal <= '9' and not (self.agent_rows[ord(goal) - ord('0')] == row and self.agent_cols[ord(goal) - ord('0')] == col):
+                elif '0' <= goal <= '9' and not (self.agent_rows[0] == row and self.agent_cols[0] == col):
                     return False
         return True
     
