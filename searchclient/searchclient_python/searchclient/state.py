@@ -128,7 +128,7 @@ class State:
                 if constraint.time == copy_state.g and (self.agent_rows[0], self.agent_cols[0]) == constraint.loc_from \
                     and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to:
                     copy_state.constraint_step = True
-            elif not isinstance(constraint, EdgeConstraint):
+            elif not isinstance(constraint, EdgeConstraint) and isinstance(constraint, Constraint):
                 if (constraint.time == copy_state.g and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to):
                     copy_state.constraint_step = True
         return copy_state

@@ -16,12 +16,11 @@ def plans_from_states(initial_states):
             plan, plan_repr = searching
             plans.append(plan) 
             plans_repr.append(plan_repr)
-            print("Ended search for initial state number", num)
-            print()
-            print("Plan extracted. Plan:", plan_repr)
-            print()
-
-        plans = agents_to_rest(plans)
+            # print("Ended search for initial state number", num)
+            # print()
+            # print("Plan extracted. Plan:", plan_repr)
+            # print()
+        
         return plans, plans_repr
 
 class Node():
@@ -60,14 +59,16 @@ def match_length(arr1, arr2):
     return arr1, arr2
 
 def agents_to_rest(plans):
+    print("Putting idle agents to rest")
     longest = max([len(plan) for plan in plans])
-    filtered_plans = [plan for plan in plans if len(plan) <= longest]
-    plans_with_rest = []
-    for plan in filtered_plans:
-        len_diff = longest - len(plan)
-        plan += [[Action.NoOp]] * len_diff
-        plans_with_rest.append(plan)
-    return plans_with_rest
+    result_plans = [plan for plan in plans if len(plan) == longest]
+    filtered_plans = [plan for plan in plans if len(plan) < longest]
+    if len(filtered_plans) > 0:
+        for plan in  filtered_plans:
+            len_diff = longest - len(plan)
+            plan += [[Action.NoOp]] * len_diff
+            result_plans.append(plan)
+    return result_plans
 
 def validate(plan, plan_list):
     """
@@ -96,7 +97,7 @@ def validate(plan, plan_list):
         # Ensure both plans are of equal length
         plan, other_plan = match_length(plan, other_plan)
 
-        for j in range(1, len(plan)-1):
+        for j in range(1, len(plan)):
             # Get current and previous states for both plans
             agent_state_current = plan[j][0][1]
             agent_state_previous = plan[j - 1][0][1]
@@ -164,13 +165,14 @@ def CBS(initial_states):
         if not C:
             print(P.plans)
             print("Found solution")
-            print("Positions:", P.paths)
+            print("Plans:", P.plans)
             if len(P.plans) == 1:
                 print("Single agent")
                 solution = P.plans[0]
                 is_single = True
             else:
                 print("Multi agent")
+                agents_to_rest(P.plans)
                 solution = [list(x) for x in zip(*P.plans)]
             return solution, is_single  # Found solution, return solution in joint action normal form
 
@@ -180,13 +182,13 @@ def CBS(initial_states):
             if isinstance(C, EdgeConflict):
                 if i == 1:
                     A.constraints.append(EdgeConstraint(agent_i, C.v, C.v1, C.t))
-                    print("appended constraint for agent", agent_i, "parameters:", C.v, C.v1, C.t)
+                    print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v, C.v1, C.t)
                 else:
                     A.constraints.append(EdgeConstraint(agent_i, C.v1, C.v, C.t))
-                    print("appended constraint for agent", agent_i, "parameters:", C.v1, C.v, C.t)
+                    print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v1, C.v, C.t)
             elif not isinstance(C, EdgeConflict):
                 A.constraints.append(Constraint(agent_i, C.v, C.t))
-                print("appended constraint for agent", agent_i, "parameters:", C.v, C.t)
+                print("appended constraint for agent", agent_i, "parameters (loc, time):", C.v, C.t)
             plan_i, path_i = A.get_single_search(agent_i)
             plan_i = plan_i[0]
             path_i = path_i[0]

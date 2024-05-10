@@ -213,7 +213,7 @@ class SearchClient:
         initial_states = SearchClient.parse_filtered_levels(server_messages)
         #  initial_state = SearchClient.parse_level(server_messages)
         if args.cbs:
-            joint_plan, is_single = CBS(initial_states) 
+            joint_plan, is_single = CBS(initial_states)
 
         # Print plan to server.
         if joint_plan is None:
@@ -223,6 +223,7 @@ class SearchClient:
             print('Found solution of length {}.'.format(len(joint_plan)), file=sys.stderr, flush=True)
             
             for joint_action in joint_plan:
+                print([a[0].name_ for a in joint_action])
                 if is_single:
                     print("|".join(a.name_ for a in joint_action), flush=True)
                 else:
