@@ -245,10 +245,6 @@ class State:
     def is_free(self, row: 'int', col: 'int', time:'int' = 0) -> 'bool':
         if State.walls[row][col] or self.boxes[row][col] != '' or self.agent_at(row, col) is not None:
             return False
-        # for constraint in self.constraints:
-        #     if (constraint.time == time and (row, col) == constraint.loc_to and constraint.agent == self.worker_name):
-        #         print("At time", constraint.time, "This location is NOT free:", constraint.loc_to, "Current state should be discarded", flush=True )
-        #         return False
         return True
     
     def agent_at(self, row: 'int', col: 'int') -> 'char':

@@ -16,10 +16,6 @@ def plans_from_states(initial_states):
             plan, plan_repr = searching
             plans.append(plan) 
             plans_repr.append(plan_repr)
-            # print("Ended search for initial state number", num)
-            # print()
-            # print("Plan extracted. Plan:", plan_repr)
-            # print()
         
         return plans, plans_repr
 
@@ -110,6 +106,13 @@ def validate(plan, plan_list):
             other_box_state_previous = other_plan[j - 1][1][1] if len(other_plan[j - 1]) > 1 else None
             t=j+1
 
+
+            # Illegal crossing detection
+            # Agents crossing each other
+            if agent_state_current == other_agent_state_previous and agent_state_previous == other_agent_state_current:
+                conflict = EdgeConflict(agent_i, agent_j, agent_state_current, other_agent_state_current, t)
+                return conflict 
+
             # Conflicting agent positions
             if agent_state_current == other_agent_state_current:
                 conflict = Conflict(agent_i, agent_j, agent_state_current, t)
@@ -121,12 +124,11 @@ def validate(plan, plan_list):
                 conflict = Conflict(agent_i, agent_j, box_state_current, t)
                 return conflict
 
-            # Illegal crossing detection
-            # Agents crossing each other
-            if agent_state_current == other_agent_state_previous and agent_state_previous == other_agent_state_current:
-                conflict = EdgeConflict(agent_i, agent_j, agent_state_current, other_agent_state_current, t)
-                return conflict 
-
+            # Follow conflict
+            if agent_state_current == other_agent_state_previous:
+                conflict = Conflict(agent_i, agent_j, agent_state_current, t)
+                return conflict
+            
             # Boxes crossing each other
             if box_state_current is not None and box_state_previous is not None and \
                     box_state_current == other_box_state_previous and box_state_previous == other_box_state_current:
@@ -148,13 +150,17 @@ def CBS(initial_states):
     root.agent = None
     open_set = set()
     open_set.add(root)
+    closed_set = set()
+    iterations = 0
 
     while open_set:
-        P = min(open_set, key=lambda x: (x.cost, x.agent))
+        iterations += 1
+        filtered_set = [p for p in open_set if p not in closed_set]
+        P = min(filtered_set, key=lambda x: (x.cost, x.agent))
         open_set.remove(P)
-        print("Opening node with cost", P.cost, "agent", P.agent)
+        closed_set.add(P)
+        print("Opening node with cost", P.cost, "agent", P.agent, "No of Constraint of the node:", len(P.constraints), "iteration number", iterations, "frontier size", len(open_set))
         print("Length of path:", len(P.paths[0]))
-        print("No of Constraint of the node:", len(P.constraints))
         C = None
 
         for path in P.paths:
@@ -173,7 +179,8 @@ def CBS(initial_states):
             else:
                 print("Multi agent")
                 agents_to_rest(P.plans)
-                solution = [list(x) for x in zip(*P.plans)]
+                solution = [x for x in zip(*P.plans)]
+                print(solution)
             return solution, is_single  # Found solution, return solution in joint action normal form
 
         for i, agent_i in enumerate(C.agents):
@@ -182,21 +189,21 @@ def CBS(initial_states):
             if isinstance(C, EdgeConflict):
                 if i == 1:
                     A.constraints.append(EdgeConstraint(agent_i, C.v, C.v1, C.t))
-                    print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v, C.v1, C.t)
+                    # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v, C.v1, C.t)
                 else:
                     A.constraints.append(EdgeConstraint(agent_i, C.v1, C.v, C.t))
-                    print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v1, C.v, C.t)
+                    # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v1, C.v, C.t)
             elif not isinstance(C, EdgeConflict):
                 A.constraints.append(Constraint(agent_i, C.v, C.t))
-                print("appended constraint for agent", agent_i, "parameters (loc, time):", C.v, C.t)
+                # print("appended constraint for agent", agent_i, "parameters (loc, time):", C.v, C.t)
             plan_i, path_i = A.get_single_search(agent_i)
             plan_i = plan_i[0]
             path_i = path_i[0]
             A.plans[int(agent_i)] = plan_i
             A.paths[int(agent_i)] = path_i
             A.cost = sum([len(plan) for plan in A.plans]) + int(agent_i)
-            print("Cost for agent", agent_i, ":", A.cost)
-            print("Adding node to set")
+            # print("Cost for agent", agent_i, ":", A.cost)
+            # print("Adding node to set")
             open_set.add(A)
 
     return None

@@ -5,6 +5,7 @@ import memory
 from color import Color
 from state import State
 from cbs import CBS
+from action import Action
 
 def match_length(arr1, arr2):
     len_diff = abs(len(arr2) - len(arr1))
@@ -220,10 +221,8 @@ class SearchClient:
             print('Unable to solve level.', file=sys.stderr, flush=True)
             sys.exit(0)
         else:
-            print('Found solution of length {}.'.format(len(joint_plan)), file=sys.stderr, flush=True)
-            
+            print('Found solution of length {}.'.format(len(joint_plan)), flush=True)
             for joint_action in joint_plan:
-                print([a[0].name_ for a in joint_action])
                 if is_single:
                     print("|".join(a.name_ for a in joint_action), flush=True)
                 else:
