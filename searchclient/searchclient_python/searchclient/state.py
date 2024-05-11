@@ -15,6 +15,13 @@ class EdgeConflict(Conflict):
         super().__init__(ai, aj, v, t)
         self.v1 = v1
 
+class BoxConflict:
+    def __init__(self,agent, box, loc_to, time):
+        self.agents = agent
+        self.box = box
+        self.loc_to = loc_to
+        self.time = time
+
 class Constraint:
     def __init__(self, agent, loc_to, time):
         self.agent = agent
@@ -25,6 +32,13 @@ class EdgeConstraint(Constraint):
     def __init__(self, agent, loc_from, loc_to, time):
         super().__init__(agent, loc_to, time)
         self.loc_from = loc_from
+
+class BoxConstraint:
+    def __init__(self,agent, box, loc_to, time):
+        self.agent = agent
+        self.box = box
+        self.loc_to = loc_to
+        self.time = time
 
 def atoms(state: 'State'):
         """
@@ -128,9 +142,13 @@ class State:
                 if constraint.time == copy_state.g and (self.agent_rows[0], self.agent_cols[0]) == constraint.loc_from \
                     and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to:
                     copy_state.constraint_step = True
-            elif not isinstance(constraint, EdgeConstraint) and isinstance(constraint, Constraint):
+            elif isinstance(constraint, Constraint):
                 if (constraint.time == copy_state.g and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to):
                     copy_state.constraint_step = True
+            elif isinstance(constraint, BoxConstraint) and constraint.time == copy_state.g and copy_boxes[constraint.loc_to[0]][constraint.loc_to[1]] != '':
+                print("BOX CONSTRAINT FOUND:", constraint.box, constraint.loc_to, copy_boxes[constraint.loc_to[0]][constraint.loc_to[1]], flush=True)
+                copy_state.constraint_step = True
+
         return copy_state
     
     def is_goal_state(self) -> 'bool':
@@ -149,7 +167,7 @@ class State:
         
         # Determine list of applicable action for each individual agent.
         applicable_actions = [[action for action in Action if self.is_applicable(agent, action)] for agent in range(num_agents)]
-        
+
         # Iterate over joint actions, check conflict and generate child states.
         joint_action = [None for _ in range(num_agents)]
         actions_permutation = [0 for _ in range(num_agents)]
