@@ -18,7 +18,7 @@ Starting the server using the searchclient:
     $ java -jar ../server.jar -l ../levels/SAD1.lvl -c "python searchclient/searchclient.py" -g -s 150 -t 180
 
 The searchclient uses the BFS search strategy by default. Use arguments -dfs, -astar, -wastar, or -greedy to set alternative search strategies (after you implement them). For instance, to use DFS search on the same level as above:
-    $ java -jar ../server.jar -l ../levels/SAD1.lvl -c "python searchclient/searchclient.py -dfs" -g -s 150 -t 180
+    $ java -jar ../server.jar -l ../levels/MAsimple2.lvl -c "python searchclient/searchclient.py -cbs" -g -s 150 -t 180
 
 Memory settings:
     * Unless your hardware is unable to support this, you should let the searchclient allocate at least 2GB of memory *
