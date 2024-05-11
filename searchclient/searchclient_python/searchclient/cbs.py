@@ -133,6 +133,7 @@ def validate(plan, plan_list):
                 print("Follow conflict found at", agent_state_current, t)
                 conflict = Conflict(agent_i, agent_j, agent_state_current, t)
                 return conflict
+            
             # Box going into other Box
             for idx, box_current in enumerate(box_states_current):
                 print("Box going into other box test:", box_current, other_box_states_current, flush=True)
@@ -140,10 +141,12 @@ def validate(plan, plan_list):
                     print("Box going into other box:", box_current, other_box_states_current, flush=True)
                     conflict = BoxConflict(agent_i,box_names_current[idx], box_current, t)
                     return conflict
+            
             #Agent going into other box
             if agent_state_current in other_box_states_current:
                 conflict = Conflict(agent_i, agent_j, agent_state_current, t)
                 return conflict
+            
             #Box going into other agent
             for idx, box_current in enumerate(box_states_current):
                 if box_current == other_agent_state_current:
@@ -154,6 +157,7 @@ def validate(plan, plan_list):
             if agent_state_current == other_agent_state_previous:
                 conflict = Conflict(agent_i, agent_j, agent_state_current, t)
                 return conflict
+            
             # Agent to Box Following
             if agent_state_current == other_box_state_previous:
                 conflict = Conflict(agent_i, agent_j, agent_state_current, t)
@@ -163,6 +167,7 @@ def validate(plan, plan_list):
             for idx, box_current in enumerate(box_states_current):
                 if box_current in other_box_states_previous:
                     return BoxConflict(agent_i,box_names_current[idx], box_current, t)
+           
             #Box to agent following
             for idx, box_current in enumerate(box_states_current):
                 if box_current == other_agent_state_previous:
@@ -209,6 +214,9 @@ def CBS(initial_states):
                 agents_to_rest(P.plans)
                 solution = [x for x in zip(*P.plans)]
             return solution, is_single  # Found solution, return solution in joint action normal form
+        
+        print("agents", C.agents)
+        
         for i, agent_i in enumerate(C.agents):
             A = copy.deepcopy(P)
             A.agent = agent_i
@@ -221,20 +229,19 @@ def CBS(initial_states):
                     A.constraints.append(EdgeConstraint(agent_i, C.v, C.v1, C.t))
                     # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v, C.v1, C.t)
                 else:
-                    print("Edge")
                     A.constraints.append(EdgeConstraint(agent_i, C.v1, C.v, C.t))
                     # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v1, C.v, C.t)
 
             elif isinstance(C, Conflict):
                 A.constraints.append(Constraint(agent_i, C.v, C.t))
-                
+
             elif isinstance(C, BoxConflict):
                 A.constraints.append(BoxConstraint(agent_i,C.box, C.loc_to, C.time))
                 # print("appended constraint for agent", agent_i, "parameters (loc, time):", C.v, C.t)
             
-            if (other_agent, C.v) in A.goal_states:
-                print("other agent in conflict:", other_agent, C.v)
-                continue
+            # if (other_agent, C.v) in A.goal_states:
+            #     print("other agent in conflict:", other_agent, C.v)
+            #     continue
 
             # Replan
             
@@ -254,7 +261,7 @@ def CBS(initial_states):
             print("adding node for agent", agent_i)
             A.plans[int(agent_i)] = plan_i
             A.paths[int(agent_i)] = path_i
-            A.cost = sum([len(plan) for plan in A.plans]) + int(agent_i)*100
+            A.cost = (int(agent_i), sum([len(plan) for plan in A.plans]))
             # print("Cost for agent", agent_i, ":", A.cost)
             # print("Adding node to set")
             open_set.add(A)
