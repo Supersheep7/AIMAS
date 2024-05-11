@@ -17,7 +17,7 @@ class EdgeConflict(Conflict):
 
 class BoxConflict:
     def __init__(self,agent, box, loc_to, time):
-        self.agents = agent
+        self.agents = [agent]
         self.box = box
         self.loc_to = loc_to
         self.time = time

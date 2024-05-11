@@ -111,9 +111,11 @@ class SearchClient:
             for agent in agents:
                 workers.append(Worker(color, agent, movable))
         walls = [[False for _ in range(num_cols)] for _ in range(num_rows)]
-        
-        boxes_to_assign = []
-        goals_to_assign = []
+
+
+        goals_to_assign = set()
+
+        boxes_to_assign = set()
         
         for worker in workers:
             for row, line in enumerate(level_lines):
@@ -122,41 +124,52 @@ class SearchClient:
                         worker.agent_rows[ord(c) - ord('0')] = row
                         worker.agent_cols[ord(c) - ord('0')] = col
                     elif c.isalpha():
-                        boxes_to_assign.append((c, (row, col)))
+                        boxes_to_assign.add((c, (row, col)))
                     elif c == '+':
                         walls[row][col] = True
             
             worker.agent_rows = [row for row in worker.agent_rows if row is not None]
             worker.agent_cols = [col for col in worker.agent_cols if col is not None]
+    
+        print("boxes",boxes_to_assign)
 
-            for row, line in enumerate(goal_level_lines):
-                for col, c in enumerate(line):
-                        if c.isalpha():
-                            goals_to_assign.append((c, (row, col)))  
-                        elif c.isdigit():
-                            goals_to_assign.append((c, (row, col)))     
+        for row, line in enumerate(goal_level_lines):
+            for col, c in enumerate(line):
+                    if c.isalpha():
+                        goals_to_assign.add((c, (row, col)))  
+                    elif c.isdigit():
+                        goals_to_assign.add((c, (row, col)))     
             
+        print("goals",goals_to_assign)
         # Here we have populated boxes to assign and goals to assign
         current_worker_index = 0
 
-        for goal in goals_to_assign:
+        while goals_to_assign:
+            goal = goals_to_assign.pop()
             row, col = goal[1]
             chosen_worker = None
+            print(current_worker_index)
+            print(workers[1].goals)
 
             for _ in range(len(workers)):
                 if goal[0] in workers[current_worker_index].movable or goal[0] == workers[current_worker_index].name:
                     chosen_worker = workers[current_worker_index]
-                    break
-                
+                    print("chosen worker", chosen_worker.name, "for goal", goal[0])
+                    chosen_worker.goals[row][col] = goal[0]
+
+                    if goal[0].isalpha():
+                        box_for_goal = next(box for box in boxes_to_assign if box[0] == goal[0])
+                        boxes_to_assign.remove(box_for_goal)
+                        row, col = box_for_goal[1]
+                        chosen_worker.boxes[row][col] = box_for_goal[0]
+
+                print("assigned goal", goal, "and box", box_for_goal, "to worker", current_worker_index)
+                print("remaining", goals_to_assign)
+
                 current_worker_index = (current_worker_index + 1) % len(workers)
+                break
 
-            chosen_worker.goals[row][col] = goal[0]
-            if goal[0].isalpha():
-                box_for_goal = next(box for box in boxes_to_assign if box[0] == goal[0])
-                boxes_to_assign.remove(box_for_goal)
-                row, col = box_for_goal[1]
-                chosen_worker.boxes[row][col] = box_for_goal[0]
-
+        print("remaining boxes", boxes_to_assign)
         current_worker_index = 0
 
         while boxes_to_assign:
@@ -167,7 +180,6 @@ class SearchClient:
             for _ in range(len(workers)):
                 if box[0] in workers[current_worker_index].movable:
                     chosen_worker = workers[current_worker_index]
-                    break
                 current_worker_index = (current_worker_index + 1) % len(workers) 
 
             chosen_worker.boxes[row][col] = box[0]
@@ -181,7 +193,9 @@ class SearchClient:
         for worker in workers:
             
             print("Initialized state for worker Name",  worker.name)
-            print(worker.goals)
+            # print(worker.name)
+            # print(worker.goals)
+            # print(worker.boxes)
             initial_states.append(State(worker.agent_rows, worker.agent_cols, worker.boxes, worker.goals, worker.name))
 
         return initial_states

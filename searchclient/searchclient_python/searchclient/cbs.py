@@ -136,9 +136,9 @@ def validate(plan, plan_list):
             
             # Box going into other Box
             for idx, box_current in enumerate(box_states_current):
-                print("Box going into other box test:", box_current, other_box_states_current, flush=True)
+                # print("Box going into other box test:", box_current, other_box_states_current, flush=True)
                 if box_current in other_box_states_current:
-                    print("Box going into other box:", box_current, other_box_states_current, flush=True)
+                    # print("Box going into other box:", box_current, other_box_states_current, flush=True)
                     conflict = BoxConflict(agent_i,box_names_current[idx], box_current, t)
                     return conflict
             
@@ -215,12 +215,14 @@ def CBS(initial_states):
                 solution = [x for x in zip(*P.plans)]
             return solution, is_single  # Found solution, return solution in joint action normal form
         
-        print("agents", C.agents)
-        
+        print("agents", C.agents)   
+
         for i, agent_i in enumerate(C.agents):
             A = copy.deepcopy(P)
             A.agent = agent_i
-            other_agent = C.agents[1 - i]
+
+            if len(C.agents) == 2:
+                other_agent = C.agents[1 - i]
 
             # Add constraint
 
