@@ -114,8 +114,9 @@ class Heuristic(metaclass=ABCMeta):
         # Default to pathfinding
         else:
             agents = []
-            for agent_num, agent_row in enumerate(state.agent_rows):
-                agent_col = state.agent_cols[agent_num]
+            for agent_row in state.agent_rows:
+                agent_num = state.worker_name
+                agent_col = state.agent_cols[0]
                 agent_pos = (agent_row, agent_col)
                 if agent_num in self.grids:
                     grid = self.grids[agent_num]
@@ -212,7 +213,7 @@ class HeuristicBFWS(Heuristic):
     '''
 
     def f(self, state: 'State') -> 'int':
-        return (self.w, state.g + self.h(state))
-    
+        return state.g + self.h(state)
+
     def __repr__(self):
         return 'BFWS evaluation'

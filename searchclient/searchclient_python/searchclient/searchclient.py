@@ -182,6 +182,7 @@ class SearchClient:
         for worker in workers:
             
             print("Initialized state for worker Name",  worker.name)
+            print(worker.goals)
             initial_states.append(State(worker.agent_rows, worker.agent_cols, worker.boxes, worker.goals, worker.name))
 
         return initial_states

@@ -37,7 +37,7 @@ def atoms(state: 'State'):
         - Set[Tuple[str, Tuple[int, int]]]: A set of tuples representing the state atoms.
         """
         atoms = set()
-        for index, row, col in zip(state.worker_name, state.agent_rows, state.agent_cols):
+        for index, row, col in zip(str(state.worker_name), state.agent_rows, state.agent_cols):
             atoms.add((f'AgentAt{index}', (row, col)))
 
         for (row_index, row) in enumerate(state.boxes):
@@ -70,7 +70,7 @@ class State:
                 
         Note: The state should be considered immutable after it has been hashed, e.g. added to a dictionary or set.
         '''
-        self.worker_name = worker_name
+        self.worker_name = int(worker_name)
         self.agent_rows = agent_rows
         self.agent_cols = agent_cols
         self.boxes = boxes
@@ -93,7 +93,7 @@ class State:
         # Copy this state.
         copy_agent_rows = self.agent_rows[:]
         copy_agent_cols = self.agent_cols[:]
-        copy_worker_name = self.worker_name[:]
+        copy_worker_name = self.worker_name
         copy_boxes = [row[:] for row in self.boxes]
 
         # Apply each action.

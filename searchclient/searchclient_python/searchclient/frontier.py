@@ -120,9 +120,9 @@ class FrontierBestFirstWidth(Frontier):
     
     def add(self, state: 'State'):
         # Call w on frontier to update the priority | e.g. if heuristic.w finds out a novel atom w value will drop to 0
-        self.heuristic.get_w(self.queue, state)
+        w = self.heuristic.get_w(self.queue, state)
         # Here priority is <w, h>         
-        priority = self.heuristic.f(state)
+        priority = (self.heuristic.f(state))
         heappush(self.queue, (priority, self.counter, state))
         self.counter += 1
         self.set.append(state)

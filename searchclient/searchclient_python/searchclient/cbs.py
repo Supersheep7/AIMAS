@@ -36,6 +36,8 @@ class Node():
                 state.constraints = [constraint for constraint in self.constraints if constraint.agent == state.worker_name]
             self.plans, self.paths = plans_from_states(self.initial_states)     # Has to be consistent with constraints
 
+
+        self.goal_states = []
         self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
     
     def get_single_search(self, single_agent):
@@ -81,14 +83,13 @@ def validate(plan, plan_list):
     # print("VALIDATE", plan)
     agent_i_full = plan[0][0][0]  # Something like 'AgentAt0'
     # print(agent_i_full)
-    agent_i = agent_i_full.split('AgentAt')[-1]  # Extract just the number after 'AgentAt'
+    agent_i = int(agent_i_full.split('AgentAt')[-1])  # Extract just the number after 'AgentAt'
 
     other_plans = [lst for lst in plan_list if lst is not plan]
-
     for other_plan in other_plans:
 
         agent_j_full = other_plan[0][0][0]
-        agent_j = agent_j_full.split('AgentAt')[-1]
+        agent_j = int(agent_j_full.split('AgentAt')[-1])
 
         # Ensure both plans are of equal length
         plan, other_plan = match_length(plan, other_plan)
@@ -110,24 +111,29 @@ def validate(plan, plan_list):
             # Illegal crossing detection
             # Agents crossing each other
             if agent_state_current == other_agent_state_previous and agent_state_previous == other_agent_state_current:
+                print("Edge conflict found at", agent_state_current, other_agent_state_current, t) 
+                print(agent_i, agent_j)
                 conflict = EdgeConflict(agent_i, agent_j, agent_state_current, other_agent_state_current, t)
                 return conflict 
+            
 
             # Conflicting agent positions
             if agent_state_current == other_agent_state_current:
+                print("Vertex conflict found at", agent_state_current, t)
                 conflict = Conflict(agent_i, agent_j, agent_state_current, t)
-                print("Returning conflict between agents", agent_i, agent_j, "at tile", agent_state_current)
                 return conflict
 
+            # Follow conflict
+            if agent_state_current == other_agent_state_previous:
+                print("Follow conflict found at", agent_state_current, t)
+                conflict = Conflict(agent_i, agent_j, agent_state_current, t)
+                return conflict
+            
             # Conflicting box positions
             if box_state_current is not None and box_state_current == other_box_state_current:
                 conflict = Conflict(agent_i, agent_j, box_state_current, t)
                 return conflict
 
-            # Follow conflict
-            if agent_state_current == other_agent_state_previous:
-                conflict = Conflict(agent_i, agent_j, agent_state_current, t)
-                return conflict
             
             # Boxes crossing each other
             if box_state_current is not None and box_state_previous is not None and \
@@ -154,13 +160,12 @@ def CBS(initial_states):
     iterations = 0
 
     while open_set:
-        iterations += 1
         filtered_set = [p for p in open_set if p not in closed_set]
         P = min(filtered_set, key=lambda x: (x.cost, x.agent))
         open_set.remove(P)
         closed_set.add(P)
-        print("Opening node with cost", P.cost, "agent", P.agent, "No of Constraint of the node:", len(P.constraints), "iteration number", iterations, "frontier size", len(open_set))
-        print("Length of path:", len(P.paths[0]))
+        print("Opening node with cost", P.cost, "agent", P.agent, "No of Constraint of the node:", len(P.constraints),\
+            "explored nodes", len(closed_set), "frontier size", len(open_set), "Longest path:", len(P.paths[0]))
         C = None
 
         for path in P.paths:
@@ -169,9 +174,9 @@ def CBS(initial_states):
                 break
 
         if not C:
-            print(P.plans)
+            # print(P.plans)
             print("Found solution")
-            print("Plans:", P.plans)
+            # print("Plans:", P.plans)
             if len(P.plans) == 1:
                 print("Single agent")
                 solution = P.plans[0]
@@ -186,22 +191,43 @@ def CBS(initial_states):
         for i, agent_i in enumerate(C.agents):
             A = copy.deepcopy(P)
             A.agent = agent_i
+            other_agent = C.agents[1 - i]
+
+            # Add constraint
+
             if isinstance(C, EdgeConflict):
                 if i == 1:
                     A.constraints.append(EdgeConstraint(agent_i, C.v, C.v1, C.t))
                     # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v, C.v1, C.t)
                 else:
+                    print("Edge")
                     A.constraints.append(EdgeConstraint(agent_i, C.v1, C.v, C.t))
                     # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v1, C.v, C.t)
+
             elif not isinstance(C, EdgeConflict):
                 A.constraints.append(Constraint(agent_i, C.v, C.t))
                 # print("appended constraint for agent", agent_i, "parameters (loc, time):", C.v, C.t)
+            
+            if (other_agent, C.v) in A.goal_states:
+                print("other agent in conflict:", other_agent, C.v)
+                continue
+
+            # Replan
+            
             plan_i, path_i = A.get_single_search(agent_i)
+
             plan_i = plan_i[0]
             path_i = path_i[0]
-            A.plans[int(agent_i)] = plan_i
-            A.paths[int(agent_i)] = path_i
-            A.cost = sum([len(plan) for plan in A.plans]) + int(agent_i)
+            A.plans[agent_i] = plan_i
+            A.paths[agent_i] = path_i
+            # Get cost
+            A.cost = (-agent_i, sum([len(plan) for plan in A.plans]), len(A.constraints))
+
+            # A.plans, A.paths = agents_to_rest(A.plans, A.paths)
+
+            # Add node
+
+            print("adding node for agent", agent_i)
             # print("Cost for agent", agent_i, ":", A.cost)
             # print("Adding node to set")
             open_set.add(A)
