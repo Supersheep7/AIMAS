@@ -2,7 +2,7 @@ from frontier import FrontierBestFirstWidth
 from heuristic import HeuristicBFWS
 from graphsearch import search
 from action import Action
-from state import Conflict, EdgeConflict, Constraint, EdgeConstraint, BoxConflict, BoxConstraint
+from state import Conflict, EdgeConflict, Constraint, EdgeConstraint, BoxConflict, BoxConstraint, mixedConflict
 import copy
 
 def plans_from_states(initial_states):
@@ -86,7 +86,7 @@ def validate(plan, plan_list):
     agent_i_full = plan[0][0][0]  # Something like 'AgentAt0'
     # print(agent_i_full)
     agent_i = int(agent_i_full.split('AgentAt')[-1])  # Extract just the number after 'AgentAt'
-
+    print("Searching for aget:", agent_i, flush=True)
     other_plans = [lst for lst in plan_list if lst is not plan]
     for other_plan in other_plans:
         if other_plan == []:
@@ -143,14 +143,15 @@ def validate(plan, plan_list):
                     return conflict
             
             #Agent going into other box
-            if agent_state_current in other_box_states_current:
-                conflict = Conflict(agent_i, agent_j, agent_state_current, t)
-                return conflict
+            for idx, other_box_current in enumerate(other_box_states_current):
+                if agent_state_current == other_box_current:
+                    conflict = mixedConflict(agent_i, agent_j, other_box_names_current[idx], other_box_current, t)
+                    return conflict
             
             #Box going into other agent
             for idx, box_current in enumerate(box_states_current):
                 if box_current == other_agent_state_current:
-                    conflict = BoxConflict(agent_i,box_names_current[idx], box_current, t)
+                    conflict = mixedConflict(agent_j, agent_i,box_names_current[idx], box_current, t)
                     return conflict
                 
             # Agent to agent Follow conflict
@@ -220,7 +221,6 @@ def CBS(initial_states):
         for i, agent_i in enumerate(C.agents):
             A = copy.deepcopy(P)
             A.agent = agent_i
-
             if len(C.agents) == 2:
                 other_agent = C.agents[1 - i]
 
@@ -236,9 +236,17 @@ def CBS(initial_states):
 
             elif isinstance(C, Conflict):
                 A.constraints.append(Constraint(agent_i, C.v, C.t))
-
+                print("Agent Conflict Added:",agent_i, C.v, C.t, flush=True)
+            elif isinstance(C, mixedConflict):
+                if A.agent == C.agents[0]:
+                    print("Mixed Agent Conflict Added:",agent_i, C.v, C.t, flush=True)
+                    A.constraints.append(Constraint(agent_i, C.v, C.t))
+                elif A.agent == C.agents[1]:
+                    print("Mixed Box Conflict Added:",agent_i, C.v, C.t, flush=True)
+                    A.constraints.append(BoxConstraint(agent_i, C.box, C.v, C.t))
             elif isinstance(C, BoxConflict):
                 A.constraints.append(BoxConstraint(agent_i,C.box, C.loc_to, C.time))
+                print("Box Conflict added:", C.loc_to, C.time, flush=True)
                 # print("appended constraint for agent", agent_i, "parameters (loc, time):", C.v, C.t)
             
             # if (other_agent, C.v) in A.goal_states:
@@ -251,6 +259,8 @@ def CBS(initial_states):
 
             plan_i = plan_i[0]
             path_i = path_i[0]
+            if plan_i is None:
+                continue
             A.plans[agent_i] = plan_i
             A.paths[agent_i] = path_i
             # Get cost

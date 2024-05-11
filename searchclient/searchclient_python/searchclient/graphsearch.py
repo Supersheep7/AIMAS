@@ -70,7 +70,7 @@ def search(initial_state, frontier):
                 is_constraint_step = current_time
             # print(current_state.worker_name, current_state.agent_cols, current_state.agent_rows)
             if current_state.is_goal_state():
-                print("Solution found", flush=True)
+                #print("Solution found", flush=True)
             # Solution found
                 plan, plan_repr = current_state.extract_plan()
                 return plan, plan_repr         

@@ -21,7 +21,14 @@ class BoxConflict:
         self.box = box
         self.loc_to = loc_to
         self.time = time
-
+class mixedConflict:
+    def __init__(self, ai, aj, box, v, t):
+        self.ai = ai
+        self.aj = aj
+        self.box = box
+        self.v = v
+        self.t = t
+        self.agents = [ai, aj]
 class Constraint:
     def __init__(self, agent, loc_to, time):
         self.agent = agent
@@ -146,7 +153,6 @@ class State:
                 if (constraint.time == copy_state.g and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to):
                     copy_state.constraint_step = True
             elif isinstance(constraint, BoxConstraint) and constraint.time == copy_state.g and copy_boxes[constraint.loc_to[0]][constraint.loc_to[1]] != '':
-                print("BOX CONSTRAINT FOUND:", constraint.box, constraint.loc_to, copy_boxes[constraint.loc_to[0]][constraint.loc_to[1]], flush=True)
                 copy_state.constraint_step = True
 
         return copy_state

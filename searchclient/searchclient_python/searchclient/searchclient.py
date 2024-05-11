@@ -163,8 +163,8 @@ class SearchClient:
                         row, col = box_for_goal[1]
                         chosen_worker.boxes[row][col] = box_for_goal[0]
 
-                print("assigned goal", goal, "and box", box_for_goal, "to worker", current_worker_index)
-                print("remaining", goals_to_assign)
+                #print("assigned goal", goal, "and box", box_for_goal, "to worker", current_worker_index)
+                #print("remaining", goals_to_assign)
 
                 current_worker_index = (current_worker_index + 1) % len(workers)
                 break
