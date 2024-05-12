@@ -5,22 +5,45 @@ from action import Action, ActionType
 class Conflict:
     def __init__(self, ai, aj, v, t):
         self.ai = ai
-        self.aj = aj 
+        self.aj = aj
         self.v = v
         self.t = t
         self.agents = [ai, aj]
+
+    def __eq__(self, other):
+        return isinstance(other, Conflict) and \
+               self.ai == other.ai and self.aj == other.aj and \
+               self.v == other.v and self.t == other.t
+
+    def __hash__(self):
+        return hash((self.ai, self.aj, self.v, self.t))
 
 class EdgeConflict(Conflict):
     def __init__(self, ai, aj, v, v1, t):
         super().__init__(ai, aj, v, t)
         self.v1 = v1
 
+    def __eq__(self, other):
+        return isinstance(other, EdgeConflict) and super().__eq__(other) and self.v1 == other.v1
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.v1))
+
 class BoxConflict:
-    def __init__(self,agent, box, loc_to, time):
-        self.agents = [agent]
-        self.box = box
+    def __init__(self, agent_i,agent_j, box_i,box_j, loc_to, time):
+        self.agents = [agent_i, agent_j]
+        self.box = [box_i, box_j]
         self.loc_to = loc_to
         self.time = time
+
+    def __eq__(self, other):
+        return isinstance(other, BoxConflict) and \
+               self.agents == other.agents and self.box == other.box and \
+               self.loc_to == other.loc_to and self.time == other.time
+
+    def __hash__(self):
+        return hash((self.agents, self.box, self.loc_to, self.time))
+
 class mixedConflict:
     def __init__(self, ai, aj, box, v, t):
         self.ai = ai
@@ -29,23 +52,54 @@ class mixedConflict:
         self.v = v
         self.t = t
         self.agents = [ai, aj]
+
+    def __eq__(self, other):
+        return isinstance(other, mixedConflict) and \
+               self.ai == other.ai and self.aj == other.aj and \
+               self.box == other.box and self.v == other.v and self.t == other.t
+
+    def __hash__(self):
+        return hash((self.ai, self.aj, self.box, self.v, self.t))
+
 class Constraint:
     def __init__(self, agent, loc_to, time):
         self.agent = agent
-        self.loc_to = loc_to      
+        self.loc_to = loc_to
         self.time = time
+
+    def __eq__(self, other):
+        return isinstance(other, Constraint) and \
+               self.agent == other.agent and self.loc_to == other.loc_to and self.time == other.time
+
+    def __hash__(self):
+        return hash((self.agent, self.loc_to, self.time))
 
 class EdgeConstraint(Constraint):
     def __init__(self, agent, loc_from, loc_to, time):
         super().__init__(agent, loc_to, time)
         self.loc_from = loc_from
 
+    def __eq__(self, other):
+        return isinstance(other, EdgeConstraint) and super().__eq__(other) and \
+               self.loc_from == other.loc_from
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.loc_from))
+
 class BoxConstraint:
-    def __init__(self,agent, box, loc_to, time):
+    def __init__(self, agent, box, loc_to, time):
         self.agent = agent
         self.box = box
         self.loc_to = loc_to
         self.time = time
+
+    def __eq__(self, other):
+        return isinstance(other, BoxConstraint) and \
+               self.agent == other.agent and self.box == other.box and \
+               self.loc_to == other.loc_to and self.time == other.time
+
+    def __hash__(self):
+        return hash((self.agent, self.box, self.loc_to, self.time))
 
 def atoms(state: 'State'):
         """
@@ -153,6 +207,9 @@ class State:
                 if (constraint.time == copy_state.g and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to):
                     copy_state.constraint_step = True
             elif isinstance(constraint, BoxConstraint) and constraint.time == copy_state.g and copy_boxes[constraint.loc_to[0]][constraint.loc_to[1]] != '':
+                if constraint.loc_to == (3,4):
+                    print("Box constraint FOUND WOWOWOW:", constraint.loc_to, flush=True)
+                    exit()
                 copy_state.constraint_step = True
 
         return copy_state
@@ -173,7 +230,11 @@ class State:
         
         # Determine list of applicable action for each individual agent.
         applicable_actions = [[action for action in Action if self.is_applicable(agent, action)] for agent in range(num_agents)]
-
+        if self.agent_rows == [3] and self.agent_cols == [5] and self.worker_name == 1 and self.g == 1:
+         print("Current location:", self.agent_rows, self.agent_cols, flush=True)
+         print("Box location:", self.boxes, flush=True)
+         print("Agent name:", self.worker_name, flush=True)
+         print("Possible actions:", applicable_actions, flush=True)
         # Iterate over joint actions, check conflict and generate child states.
         joint_action = [None for _ in range(num_agents)]
         actions_permutation = [0 for _ in range(num_agents)]

@@ -63,11 +63,12 @@ def search(initial_state, frontier):
             current_time = current_state.g+1
             current_constraints = current_state.constraints
             constraint_times = [constraint.time for constraint in current_constraints]
+            constraint_locations = [(constraint.loc_to) for constraint in current_constraints]
             # print("Current constraint times:", constraint_times, flush=True)
             # print("Current constraint locations:", [(constraint.loc_from, constraint.loc_to) for constraint in current_constraints], flush=True)
             is_constraint_step = None
-            if current_time in constraint_times:
-                is_constraint_step = current_time
+            #if (current_state.agent_cols, current_state.agent_rows) == ([3],[2]) and current_state.worker_name == "worker1":
+            #    print("LOOK FOR CONSTRAINTS\n\n\n\n coords:", current_state.worker_name, current_state.agent_cols, current_state.agent_rows, flush=True)
             # print(current_state.worker_name, current_state.agent_cols, current_state.agent_rows)
             if current_state.is_goal_state():
                 #print("Solution found", flush=True)
@@ -79,6 +80,8 @@ def search(initial_state, frontier):
 
             explored.add(current_state)
             for child_state in expanded_states:
+                #if current_state.agent_rows == [3] and current_state.agent_cols == [5] and current_state.worker_name == 1:
+                    #print("Child state:",child_state.agent_cols, child_state.agent_rows, current_time-1, flush=True)
                 # print(child_state.agent_rows, child_state.agent_cols, child_state.constraint_step)
                 # print("Child state:",child_state.agent_cols, child_state.agent_rows, current_time-1, flush=True)
                 if not frontier.contains(child_state) and child_state.constraint_step == False:

@@ -142,19 +142,20 @@ class SearchClient:
             
         print("goals",goals_to_assign)
         # Here we have populated boxes to assign and goals to assign
-        current_worker_index = 0
+                # Here we have populated boxes to assign and goals to assign
+        current_worker_index = -1
 
         while goals_to_assign:
             goal = goals_to_assign.pop()
             row, col = goal[1]
             chosen_worker = None
-            print(current_worker_index)
-            print(workers[1].goals)
+            # print(current_worker_index)
 
             for _ in range(len(workers)):
+                current_worker_index = (current_worker_index + 1) % len(workers)
                 if goal[0] in workers[current_worker_index].movable or goal[0] == workers[current_worker_index].name:
                     chosen_worker = workers[current_worker_index]
-                    print("chosen worker", chosen_worker.name, "for goal", goal[0])
+                    # print("chosen worker", chosen_worker.name, "for goal", goal[0])
                     chosen_worker.goals[row][col] = goal[0]
 
                     if goal[0].isalpha():
@@ -163,13 +164,11 @@ class SearchClient:
                         row, col = box_for_goal[1]
                         chosen_worker.boxes[row][col] = box_for_goal[0]
 
-                #print("assigned goal", goal, "and box", box_for_goal, "to worker", current_worker_index)
-                #print("remaining", goals_to_assign)
+                        # print("assigned goal", goal, "and box", box_for_goal, "to worker", current_worker_index)
+                        # print("remaining", goals_to_assign)
 
-                current_worker_index = (current_worker_index + 1) % len(workers)
-                break
+                        break
 
-        print("remaining boxes", boxes_to_assign)
         current_worker_index = 0
 
         while boxes_to_assign:
