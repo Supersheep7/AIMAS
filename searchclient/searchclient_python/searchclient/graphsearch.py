@@ -43,7 +43,6 @@ def search(initial_state, frontier):
 
         frontier.add(initial_state)
         explored = set()
-
         while True:
             iterations += 1
             if iterations % 1000 == 0:
@@ -71,19 +70,22 @@ def search(initial_state, frontier):
             # print(current_state.worker_name, current_state.agent_cols, current_state.agent_rows)
             if current_state.is_goal_state():
                 print("Solution found", flush=True)
+
             # Solution found
                 plan, plan_repr = current_state.extract_plan()
                 return plan, plan_repr         
 
             expanded_states = current_state.get_expanded_states()
-
             explored.add(current_state)
+
             for child_state in expanded_states:
                 # print(child_state.agent_rows, child_state.agent_cols, child_state.constraint_step)
                 # print("Child state:",child_state.agent_cols, child_state.agent_rows, current_time-1, flush=True)
                 if not frontier.contains(child_state) and child_state.constraint_step == False:
+                    # print("Child state:",child_state.agent_cols, child_state.agent_rows, current_time-1, flush=True)
                 #    print("Added to frontier", flush=True)
                     frontier.add(child_state)
+            
                                 
             # print_search_status(explored, frontier)
         

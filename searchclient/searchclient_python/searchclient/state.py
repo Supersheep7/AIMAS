@@ -97,6 +97,7 @@ class State:
         ''' We passed the goals to the state to account for goal decomposition '''
 
         self.goals = goals
+        
     
     def result(self, joint_action: '[Action, ...]') -> 'State':
         '''
@@ -109,7 +110,7 @@ class State:
         copy_agent_cols = self.agent_cols[:]
         copy_worker_name = self.worker_name
         copy_boxes = [row[:] for row in self.boxes]
-
+        
         # Apply each action.
         for agent, action in enumerate(joint_action):  
             if action.type is ActionType.NoOp:
@@ -146,7 +147,6 @@ class State:
                 if (constraint.time == copy_state.g and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to):
                     copy_state.constraint_step = True
             elif isinstance(constraint, BoxConstraint) and constraint.time == copy_state.g and copy_boxes[constraint.loc_to[0]][constraint.loc_to[1]] != '':
-                print("BOX CONSTRAINT FOUND:", constraint.box, constraint.loc_to, copy_boxes[constraint.loc_to[0]][constraint.loc_to[1]], flush=True)
                 copy_state.constraint_step = True
 
         return copy_state

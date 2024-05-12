@@ -6,12 +6,11 @@ from state import Conflict, EdgeConflict, Constraint, EdgeConstraint, BoxConflic
 import copy
 
 def plans_from_states(initial_states):
-
+    
         plans = []
         plans_repr = []
-
         for num, initial_state in enumerate(initial_states):
-            print("Searching for agent", initial_state.worker_name)
+            print("Searching for agent", initial_state.worker_name, flush=True)
             frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))
             searching = search(initial_state, frontier)
             plan, plan_repr = searching
@@ -37,8 +36,7 @@ class Node():
             for state in self.initial_states:
                 state.constraints = [constraint for constraint in self.constraints if constraint.agent == state.worker_name]
             self.plans, self.paths = plans_from_states(self.initial_states)     # Has to be consistent with constraints
-
-
+            
         self.goal_states = []
         self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
     
@@ -178,6 +176,8 @@ def validate(plan, plan_list):
     return None    # [ConstraintObject0, ..., ConstraintObjectn]
 
 def CBS(initial_states):
+
+    print("CBS started", flush=True)
     is_single = False
     root = Node(initial_states)
     root.agent = None
@@ -192,7 +192,7 @@ def CBS(initial_states):
         open_set.remove(P)
         closed_set.add(P)
         print("Opening node with cost", P.cost, "agent", P.agent, "No of Constraint of the node:", len(P.constraints),\
-            "explored nodes", len(closed_set), "frontier size", len(open_set), "Longest path:", len(P.paths[0]))
+            "explored nodes", len(closed_set), "frontier size", len(open_set), "Longest path:", len(P.paths[0]), flush=True)
         C = None
 
         for path in P.paths:
@@ -215,8 +215,6 @@ def CBS(initial_states):
                 solution = [x for x in zip(*P.plans)]
             return solution, is_single  # Found solution, return solution in joint action normal form
         
-        print("agents", C.agents)   
-
         for i, agent_i in enumerate(C.agents):
             A = copy.deepcopy(P)
             A.agent = agent_i
@@ -254,18 +252,16 @@ def CBS(initial_states):
             A.plans[agent_i] = plan_i
             A.paths[agent_i] = path_i
             # Get cost
-            A.cost = (-agent_i, sum([len(plan) for plan in A.plans]), len(A.constraints))
 
             # A.plans, A.paths = agents_to_rest(A.plans, A.paths)
 
             # Add node
 
             print("adding node for agent", agent_i)
-            A.plans[int(agent_i)] = plan_i
-            A.paths[int(agent_i)] = path_i
-            A.cost = (int(agent_i), sum([len(plan) for plan in A.plans]))
+            print([constraint.loc_to for constraint in A.constraints])
             # print("Cost for agent", agent_i, ":", A.cost)
             # print("Adding node to set")
+            A.cost = (agent_i, sum([len(plan) for plan in A.plans]), len(A.constraints))
             open_set.add(A)
             print("open set length:", len(open_set), flush=True)
     return None

@@ -87,7 +87,6 @@ class Heuristic(metaclass=ABCMeta):
     def h(self, state: 'State') -> 'int':
         
         count = 0
-        k = 1
 
         ''' SAboxes '''           
 
@@ -109,7 +108,8 @@ class Heuristic(metaclass=ABCMeta):
                 grid = np.array(grid)
                 ''' If we want to add nearest box heuristic in the mix '''
                 count += self.manhattan((box[1][0], box[1][1]), (state.agent_rows[0], state.agent_cols[0]))
-                count += grid[box[1][0]][box[1][1]] * k
+                count += grid[box[1][0]][box[1][1]]
+
 
         # Default to pathfinding
         else:
@@ -213,7 +213,7 @@ class HeuristicBFWS(Heuristic):
     '''
 
     def f(self, state: 'State') -> 'int':
-        return (-self.w, state.g + self.h(state))
+        return (-self.w, self.h(state))
     
     def __repr__(self):
         return 'BFWS evaluation'
