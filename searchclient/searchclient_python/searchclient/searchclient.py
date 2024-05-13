@@ -139,6 +139,9 @@ class SearchClient:
                         goals_to_assign.add((c, (row, col)))     
             
         # Here we have populated boxes to assign and goals to assign
+                # Here we have populated boxes to assign and goals to assign
+
+        # Here we have populated boxes to assign and goals to assign
         current_worker_index = -1
 
         while goals_to_assign:
@@ -162,7 +165,7 @@ class SearchClient:
 
                         # print("assigned goal", goal, "and box", box_for_goal, "to worker", current_worker_index)
                         # print("remaining", goals_to_assign)
-
+                        workers[current_worker_index] = chosen_worker
                         break
 
         current_worker_index = 0
@@ -176,9 +179,10 @@ class SearchClient:
                 if box[0] in workers[current_worker_index].movable:
                     chosen_worker = workers[current_worker_index]
                 current_worker_index = (current_worker_index + 1) % len(workers) 
+                chosen_worker.boxes[row][col] = box[0]
+                workers[current_worker_index] = chosen_worker
+                break
 
-            chosen_worker.boxes[row][col] = box[0]
-          
         # End.
         # line is currently "#end".
         State.agent_colors = agent_colors
@@ -187,11 +191,8 @@ class SearchClient:
             
         for worker in workers:
             
-            # print(worker.name)
-            # print(worker.goals)
-            # print(worker.boxes)
+            print("Initialized state for worker Name",  worker.name, flush=True)
             initial_states.append(State(worker.agent_rows, worker.agent_cols, worker.boxes, worker.goals, worker.name))
-
         return initial_states
     
     @staticmethod

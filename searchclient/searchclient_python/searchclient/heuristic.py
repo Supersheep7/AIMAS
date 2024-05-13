@@ -13,7 +13,7 @@ class Heuristic(metaclass=ABCMeta):
         self.current_box = None
         self.alphabet = string.ascii_uppercase
         self.latest_state = initial_state
-        self.novelty_sets = set()                             # We assume PDDL tuples
+        self.novelty_sets = []                             # We assume PDDL tuples
         self.w = 1
 
         def get_neighbors(grid, pos):
@@ -86,7 +86,8 @@ class Heuristic(metaclass=ABCMeta):
 
     def h(self, state: 'State') -> 'int':
         
-        count = 0
+        count0 = 0
+        count1 = 0
 
         ''' SAboxes '''           
 
@@ -107,9 +108,10 @@ class Heuristic(metaclass=ABCMeta):
             for box, grid in zip(boxes, grids):
                 grid = np.array(grid)
                 ''' If we want to add nearest box heuristic in the mix '''
-                count += self.manhattan((box[1][0], box[1][1]), (state.agent_rows[0], state.agent_cols[0]))
-                count += grid[box[1][0]][box[1][1]]
+                count0 += grid[box[1][0]][box[1][1]]
+                count1 += self.manhattan((box[1][0], box[1][1]), (state.agent_rows[0], state.agent_cols[0]))
 
+            return (count0, count1)
 
         # Default to pathfinding
         else:
@@ -126,9 +128,9 @@ class Heuristic(metaclass=ABCMeta):
                 else: 
                     count += self.manhattan(agent_pos, (agent_num, agent_num))
 
-        return count
+            return count
 
-    def get_w(self, frontier, state: 'State') -> 'int':
+    def get_w(self, explored, state: 'State') -> 'int':
         
         ''' For efficiency,
         as discussed before, we don’t compute the value
@@ -139,24 +141,18 @@ class Heuristic(metaclass=ABCMeta):
         measures greater than 1. 
         '''
 
-        w = self.w
-        
-        if len(frontier) < 1:
-            return w
-
         state_repr = atoms(state)
 
-        heuristic_val = self.h(state)
-        filtered_seen_states = [seen_state[2] for seen_state in frontier if self.h(seen_state[2]) == heuristic_val]
-        for seen_state in filtered_seen_states:
-            self.novelty_sets.add(atoms(seen_state))      # This should populate the set with a set for each seen state with the same h
-  
-        for novel_set in self.novelty_sets:
-            if state_repr - novel_set:        # If one atom is novel
-                w = 0
-                self.w = w
+        for seen_state in explored:
+            self.novelty_sets.append(atoms(seen_state))      # This should populate the set with a set for each seen state with the same h
 
-        return w
+        if state_repr not in self.novelty_sets:        # If one atom is novel
+            state.w = 0
+
+        else:
+            state.w = self.novelty_sets.count(state_repr)
+
+        return
 
     @abstractmethod
     def f(self, state: 'State') -> 'int': pass
@@ -213,7 +209,11 @@ class HeuristicBFWS(Heuristic):
     '''
 
     def f(self, state: 'State') -> 'int':
-        return (-self.w, self.h(state))
+        heuristic_value = self.h(state)
+        if type(heuristic_value) == int:
+            return (state.g + heuristic_value)
+        else:
+            return ((state.w, heuristic_value[0], heuristic_value[1]))
     
     def __repr__(self):
         return 'BFWS evaluation'
