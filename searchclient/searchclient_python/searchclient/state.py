@@ -28,7 +28,6 @@ class EdgeConflict(Conflict):
 
     def __hash__(self):
         return hash((super().__hash__(), self.v1))
-
 class AgentFollowConflict:
     def __init__(self, ai, aj, v, t):
         self.ai = ai
@@ -75,7 +74,6 @@ class BoxBoxFollowConflict:
                self.box == other.box and self.v == other.v and self.t == other.t
     def __hash__(self):
         return hash((self.ai, self.aj, self.box, self.v, self.t))
-
 class BoxConflict:
     def __init__(self, agent_i,agent_j, box_i,box_j, loc_to, time):
         self.agents = [agent_i, agent_j]

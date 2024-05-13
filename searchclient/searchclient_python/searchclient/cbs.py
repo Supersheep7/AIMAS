@@ -102,16 +102,15 @@ def validate(plan, plan_list):
     - Conflict: First conflict found during the validation process
     """
     agent_i_full = plan[0][0][0]  # Something like 'AgentAt0'
-    # print(agent_i_full)
-    agent_i = int(agent_i_full.split('AgentAt')[-1])  # Extract just the number after 'AgentAt'ù
+    agent_i = int(agent_i_full.split('AgentAt')[-1])
     other_plans = [lst for lst in plan_list if lst is not plan]
     for other_plan in other_plans:
         if other_plan == [] or other_plan == []:
             continue
         agent_j_full = other_plan[0][0][0]
         agent_j = int(agent_j_full.split('AgentAt')[-1])
-
         # Ensure both plans are of equal length
+        plan_copy, other_plan = match_length(plan, other_plan)
         plan_copy, other_plan = match_length(plan, other_plan)
         for j in range(1, len(plan)):
             # Get current and previous states for both plans
@@ -121,11 +120,14 @@ def validate(plan, plan_list):
             box_state_previous = plan_copy[j - 1][1][1] if len(plan_copy[j - 1]) > 1 else None
 
             other_agent_state_current = other_plan[j][0][1]
+
             other_agent_state_previous = other_plan[j - 1][0][1]
             other_box_state_current = other_plan[j][1][1] if len(other_plan[j]) > 1 else None
             other_box_state_previous = other_plan[j - 1][1][1] if len(other_plan[j - 1]) > 1 else None
             t=j
 
+            box_states_current = [state[1] for state in plan_copy[j][1:] if len(state) > 1]
+            box_names_current = [state[0].split('BoxAt')[-1] for state in plan_copy[j][1:] if len(state) > 1]
             box_states_current = [state[1] for state in plan_copy[j][1:] if len(state) > 1]
             box_names_current = [state[0].split('BoxAt')[-1] for state in plan_copy[j][1:] if len(state) > 1]
             other_box_states_previous = [state[1] for state in other_plan[j - 1][1:] if len(state) > 1]
@@ -149,6 +151,7 @@ def validate(plan, plan_list):
             if agent_state_current == other_agent_state_previous:
                 print("Follow conflict found at", agent_state_current, t)
                 conflict = AgentFollowConflict(agent_i, agent_j, agent_state_current, t)
+                conflict = AgentFollowConflict(agent_i, agent_j, agent_state_current, t)
                 return conflict
             
             # Box going into other Box
@@ -168,26 +171,33 @@ def validate(plan, plan_list):
                 if box_current == other_agent_state_current:
                     conflict = mixedConflict(agent_j, agent_i,box_names_current[idx], box_current, t)
                     return conflict
+                    return conflict
             
             # Agent to Box Following
             for idx, other_box_current in enumerate(other_box_states_previous):
                 if agent_state_current == other_box_current:
                     conflict = AgentBoxFollowConflict(agent_i, agent_j, other_box_names_current[idx],  agent_state_current, t,0)
                     return conflict
+            for idx, other_box_current in enumerate(other_box_states_previous):
+                if agent_state_current == other_box_current:
+                    conflict = AgentBoxFollowConflict(agent_i, agent_j, other_box_names_current[idx],  agent_state_current, t,0)
+                    return conflict
             
             # Box to Box following
-            for other_idx, other_box_current in enumerate(other_box_states_previous):
+            for idx, box_current in enumerate(box_states_current):
+                for other_idx, other_box_current in enumerate(other_box_states_previous):
                     if box_current == other_box_current:
                         return BoxBoxFollowConflict(agent_i, agent_j, box_names_current[idx], other_box_names_current[other_idx], box_current, t)
            
             #Box to agent following
             for idx, box_current in enumerate(box_states_current):
                 if box_current == other_agent_state_previous:
-                    print("Box to agent following test:", box_current, other_agent_state_previous, flush=True)
                     return AgentBoxFollowConflict(agent_j, agent_i, box_names_current[idx], box_current, t,1)
 
 
+
     return None    # [ConstraintObject0, ..., ConstraintObjectn]
+
 
 def CBS(initial_states):
     is_single = False
