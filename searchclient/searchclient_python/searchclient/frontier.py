@@ -117,7 +117,7 @@ class FrontierBestFirstWidth(Frontier):
         self.queue = []
         self.set = []
         self.counter = 0
-        self.explored = set()
+        self.explored = []
     
     def add(self, state: 'State'):
         # Call w on frontier to update the priority | e.g. if heuristic.w finds out a novel atom w value will drop to 0

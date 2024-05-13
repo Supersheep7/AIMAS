@@ -88,6 +88,7 @@ class Heuristic(metaclass=ABCMeta):
         
         count0 = 0
         count1 = 0
+        count = 0
 
         ''' SAboxes '''           
 
@@ -128,7 +129,7 @@ class Heuristic(metaclass=ABCMeta):
                 else: 
                     count += self.manhattan(agent_pos, (agent_num, agent_num))
 
-            return count
+            return int(count)
 
     def get_w(self, explored, state: 'State') -> 'int':
         
@@ -143,14 +144,11 @@ class Heuristic(metaclass=ABCMeta):
 
         state_repr = atoms(state)
 
-        for seen_state in explored:
-            self.novelty_sets.append(atoms(seen_state))      # This should populate the set with a set for each seen state with the same h
-
-        if state_repr not in self.novelty_sets:        # If one atom is novel
+        if state_repr not in explored:        # If one atom is novel
             state.w = 0
 
         else:
-            state.w = self.novelty_sets.count(state_repr)
+            state.w = explored.count(state_repr)
 
         return
 

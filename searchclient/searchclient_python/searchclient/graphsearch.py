@@ -3,6 +3,7 @@ import time
 import sys
 
 from action import Action
+from state import atoms
 
 
 globals().update(Action.__members__)
@@ -13,8 +14,9 @@ def search(initial_state, frontier):
        
         iterations = 0
 
-        frontier.explored.add(initial_state)
+        frontier.explored.append(atoms(initial_state))
         frontier.add(initial_state)
+        # print("Started search for worker", initial_state.worker_name)
 
         while True:
             iterations += 1
@@ -27,7 +29,7 @@ def search(initial_state, frontier):
                 return None
 
             if frontier.is_empty():
-                print("Big bomboclat for", initial_state.worker_name)
+                # print("Big bomboclat for", initial_state.worker_name)
                 plan, plan_repr = None, None
                 return plan, plan_repr
             
@@ -50,7 +52,7 @@ def search(initial_state, frontier):
 
             expanded_states = current_state.get_expanded_states()
 
-            frontier.explored.add(current_state)
+            frontier.explored.append(atoms(current_state))
 
             for child_state in expanded_states:
                 #if current_state.agent_rows == [3] and current_state.agent_cols == [5] and current_state.worker_name == 1:
