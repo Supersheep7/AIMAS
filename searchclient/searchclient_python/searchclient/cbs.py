@@ -2,7 +2,7 @@ from frontier import FrontierBestFirstWidth
 from heuristic import HeuristicBFWS
 from graphsearch import search
 from action import Action
-from state import Conflict, EdgeConflict, Constraint, EdgeConstraint, BoxConflict, BoxConstraint, mixedConflict
+from state import Conflict, EdgeConflict, Constraint, EdgeConstraint, BoxConflict, BoxConstraint, mixedConflict, AgentFollowConflict,AgentBoxFollowConflict, BoxBoxFollowConflict
 import copy
 import random
 
@@ -102,32 +102,32 @@ def validate(plan, plan_list):
     - Conflict: First conflict found during the validation process
     """
     agent_i_full = plan[0][0][0]  # Something like 'AgentAt0'
-    # print(agent_i_full)
-    agent_i = int(agent_i_full.split('AgentAt')[-1])  # Extract just the number after 'AgentAt'ù
+    agent_i = int(agent_i_full.split('AgentAt')[-1])
     other_plans = [lst for lst in plan_list if lst is not plan]
     for other_plan in other_plans:
+        if other_plan == plan:
+            continue
         if other_plan == []:
             continue
         agent_j_full = other_plan[0][0][0]
         agent_j = int(agent_j_full.split('AgentAt')[-1])
-
         # Ensure both plans are of equal length
-        plan, other_plan = match_length(plan, other_plan)
+        plan_copy, other_plan = match_length(plan, other_plan)
         for j in range(1, len(plan)):
             # Get current and previous states for both plans
-            agent_state_current = plan[j][0][1]
-            agent_state_previous = plan[j - 1][0][1]
-            box_state_current = plan[j][1][1] if len(plan[j]) > 1 else None
-            box_state_previous = plan[j - 1][1][1] if len(plan[j - 1]) > 1 else None
-
+            agent_state_current = plan_copy[j][0][1]
+            agent_state_previous = plan_copy[j - 1][0][1]
+            box_state_current = plan_copy[j][1][1] if len(plan_copy[j]) > 1 else None
+            box_state_previous = plan_copy[j - 1][1][1] if len(plan_copy[j - 1]) > 1 else None
             other_agent_state_current = other_plan[j][0][1]
+
             other_agent_state_previous = other_plan[j - 1][0][1]
             other_box_state_current = other_plan[j][1][1] if len(other_plan[j]) > 1 else None
             other_box_state_previous = other_plan[j - 1][1][1] if len(other_plan[j - 1]) > 1 else None
             t=j
 
-            box_states_current = [state[1] for state in plan[j][1:] if len(state) > 1]
-            box_names_current = [state[0].split('BoxAt')[-1] for state in plan[j][1:] if len(state) > 1]
+            box_states_current = [state[1] for state in plan_copy[j][1:] if len(state) > 1]
+            box_names_current = [state[0].split('BoxAt')[-1] for state in plan_copy[j][1:] if len(state) > 1]
             other_box_states_previous = [state[1] for state in other_plan[j - 1][1:] if len(state) > 1]
             other_box_states_current = [state[1] for state in other_plan[j][1:] if len(state) > 1]
             other_box_names_current = [state[0].split('BoxAt')[-1] for state in other_plan[j][1:] if len(state) > 1]
@@ -148,7 +148,7 @@ def validate(plan, plan_list):
             # Follow conflict
             if agent_state_current == other_agent_state_previous:
                 print("Follow conflict found at", agent_state_current, t)
-                conflict = Conflict(agent_i, agent_j, agent_state_current, t)
+                conflict = AgentFollowConflict(agent_i, agent_j, agent_state_current, t)
                 return conflict
             
             # Box going into other Box
@@ -168,32 +168,28 @@ def validate(plan, plan_list):
                 if box_current == other_agent_state_current:
                     conflict = mixedConflict(agent_j, agent_i,box_names_current[idx], box_current, t)
                     return conflict
-                
-            # Agent to agent Follow conflict
-            if agent_state_current == other_agent_state_previous:
-                conflict = Conflict(agent_i, agent_j, agent_state_current, t)
-                return conflict
             
             # Agent to Box Following
-            if agent_state_current == other_box_state_previous:
-                print("Agent following box conflict found at", agent_state_current, t)
-                conflict = Conflict(agent_i, agent_j, agent_state_current, t)
-                return conflict
+            for idx, other_box_current in enumerate(other_box_states_previous):
+                if agent_state_current == other_box_current:
+                    conflict = AgentBoxFollowConflict(agent_i, agent_j, other_box_names_current[idx],  agent_state_current, t,0)
+                    return conflict
             
             # Box to Box following
             for idx, box_current in enumerate(box_states_current):
-                if box_current in other_box_states_previous:
-                    print("Box to box following test:", box_current, other_box_states_previous, flush=True)
-                    return BoxConflict(agent_i, None, box_names_current[idx], None, box_current, t)
+                for other_idx, other_box_current in enumerate(other_box_states_previous):
+                    if box_current == other_box_current:
+                        return BoxBoxFollowConflict(agent_i, agent_j, box_names_current[idx], other_box_names_current[other_idx], box_current, t)
            
             #Box to agent following
             for idx, box_current in enumerate(box_states_current):
                 if box_current == other_agent_state_previous:
-                    print("Box to agent following test:", box_current, other_agent_state_previous, flush=True)
-                    return BoxConflict(agent_i, None, box_names_current[idx], None, box_current, t)
+                    return AgentBoxFollowConflict(agent_j, agent_i, box_names_current[idx], box_current, t,1)
+
 
 
     return None    # [ConstraintObject0, ..., ConstraintObjectn]
+
 
 def CBS(initial_states):
     is_single = False
@@ -239,49 +235,62 @@ def CBS(initial_states):
             return solution, is_single  # Found solution, return solution in joint action normal form
         
         for i, agent_i in enumerate(C.agents):
-            A = copy.deepcopy(P)
-            A.agent = agent_i
             if agent_i is None:
                 continue
-            if len(C.agents) == 2:
-                other_agent = C.agents[1 - i]
-            # Add constraint
-            if isinstance(C, EdgeConflict):
-                if i == 1:
-                    A.constraints.append(EdgeConstraint(agent_i, C.v, C.v1, C.t))
-                    # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v, C.v1, C.t)
-                else:
-                    A.constraints.append(EdgeConstraint(agent_i, C.v1, C.v, C.t))
-                    # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v1, C.v, C.t)
-
-            elif isinstance(C, Conflict):
-                A.constraints.append(Constraint(agent_i, C.v, C.t))
-                # print("Agent Conflict Added:",agent_i, C.v, C.t, flush=True)
-
-            elif isinstance(C, mixedConflict): 
-                if A.agent == C.agents[0]:
-                    # print("Mixed Agent Conflict Added:",agent_i, C.v, C.t, flush=True)
+            else:
+                A = copy.deepcopy(P)
+                A.agent = agent_i
+                print("Initial constraints:", len(A.constraints))
+                print("len of P paths", len(P.paths[0]))
+                if len(C.agents) == 2:
+                    other_agent = C.agents[1 - i]
+                # Add constraint
+                if isinstance(C, Conflict):
                     A.constraints.append(Constraint(agent_i, C.v, C.t))
-                    #else:
-                    #    A.constraints.append(Constraint(agent_i, C.v, C.t))                      
-                elif A.agent == C.agents[1]:
-                    # print("Mixed Box Conflict Added:",agent_i, C.v, C.t, flush=True)
-                    #A.constraints.append(BoxConstraint(agent_i, C.box, C.v, C.t))  
-                    A.constraints.append(BoxConstraint(agent_i, C.box, C.v, C.t))  
-                            
-            elif isinstance(C, BoxConflict):
-                if A.agent == C.agents[0]:
-                    A.constraints.append(BoxConstraint(agent_i,C.box[0], C.loc_to, C.time))
-                    # print("Box Conflict added for:", agent_i,C.loc_to, C.time, flush=True)
-                elif A.agent == C.agents[1]:
-                    A.constraints.append(BoxConstraint(agent_i,C.box[1], C.loc_to, C.time))
-                    # print("Box Conflict added for :", agent_i,C.loc_to, C.time, flush=True)
-                # print("appended constraint for agent", agent_i, "parameters (loc, time):", C.v, C.t)
-            
-            # if (other_agent, C.v) in A.goal_states:
-            #     print("other agent in conflict:", other_agent, C.v)
-            #     continue
 
+                elif isinstance(C, mixedConflict): 
+                    if A.agent == C.agents[0]:
+                        A.constraints.append(Constraint(agent_i, C.v, C.t))                    
+                    elif A.agent == C.agents[1]:
+                        A.constraints.append(BoxConstraint(agent_i, C.box, C.v, C.t))  
+
+                elif isinstance(C, BoxConflict):
+                    if A.agent == C.agents[0]:
+                        A.constraints.append(BoxConstraint(agent_i,C.box[0], C.loc_to, C.time))
+                    elif A.agent == C.agents[1]:
+                        A.constraints.append(BoxConstraint(agent_i,C.box[1], C.loc_to, C.time))
+
+                elif isinstance(C, AgentFollowConflict):
+                    if A.agent == C.agents[0]:
+                        A.constraints.append(Constraint(agent_i, C.v, C.t))
+                    elif A.agent == C.agents[1]:
+                        if C.t == 1:
+                            continue
+                        A.constraints.append(Constraint(agent_i, C.v, C.t-1))
+
+                elif isinstance(C, AgentBoxFollowConflict):
+                    if A.agent == C.agents[0]:
+                        if C.follower == 0:
+                            A.constraints.append(Constraint(agent_i, C.v, C.t))
+                        elif C.follower == 1:
+                            if C.t == 1:
+                                continue
+                            A.constraints.append(Constraint(agent_i, C.v, C.t-1))
+                    elif A.agent == C.agents[1]:
+                        if C.follower == 0:
+                            if C.t == 1:
+                                continue
+                            A.constraints.append(BoxConstraint(agent_i,C.box, C.v, C.t-1))
+                        elif C.follower == 1:
+                            A.constraints.append(BoxConstraint(agent_i, C.box, C.v, C.t))
+
+                elif isinstance(C, BoxBoxFollowConflict):
+                    if A.agent == C.agents[0]:
+                        A.constraints.append(BoxConstraint(agent_i, C.box[0], C.v, C.t))
+                    elif A.agent == C.agents[1]:
+                        if C.t == 1:
+                            continue
+                        A.constraints.append(BoxConstraint(agent_i, C.box[1], C.v, C.t-1))
             # Replan
             
             plan_i, path_i = A.get_single_search(agent_i)
