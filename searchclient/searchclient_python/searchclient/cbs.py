@@ -2,7 +2,7 @@ from frontier import FrontierBestFirstWidth
 from heuristic import HeuristicBFWS
 from graphsearch import search
 from action import Action
-from state import Conflict, EdgeConflict, Constraint, EdgeConstraint, BoxConflict, BoxConstraint, mixedConflict
+from state import Conflict, EdgeConflict, Constraint, EdgeConstraint, BoxConflict, BoxConstraint, mixedConflict, atoms
 import copy
 
 def plans_from_states(initial_states):
@@ -46,10 +46,12 @@ class Node():
         state = next((state for state in self.initial_states if state.worker_name == single_agent), None)
         state.constraints = self.constraints
         state = [state]
+        #print("States:", state, flush=True)
         return plans_from_states(state)
-    def get_constraints_tuple(self):
-        # Convert each constraint into a tuple based on its properties
-        return tuple(self.constraint_to_tuple(constraint) for constraint in self.constraints)
+    
+    def get_constraints_set(self):
+        # Convert each constraint into a tuple based on its properties and create a frozenset
+        return frozenset(self.constraint_to_tuple(constraint) for constraint in self.constraints)
 
     def constraint_to_tuple(self, constraint):
         # Create a tuple representation of the constraint
@@ -57,15 +59,17 @@ class Node():
             return (constraint.agent, constraint.box, constraint.loc_to, constraint.time)
         else:
             return (constraint.agent, constraint.loc_to, constraint.time)
+
     def __hash__(self):
         plan_tuple = tuple(tuple(tuple(action) for action in plan) for plan in self.plans)
-        constraints_tuple = self.get_constraints_tuple()
-        return hash((self.agent, constraints_tuple, plan_tuple))
+        constraints_set = self.get_constraints_set()  # Use set for hashing
+        return hash((self.agent, constraints_set, plan_tuple))
+
     def __eq__(self, other):
         if not isinstance(other, type(self)):
             return False
         return (self.agent == other.agent and
-                self.constraints == other.constraints and
+                self.get_constraints_set() == other.get_constraints_set() and
                 self.plans == other.plans)
 
 def match_length(arr1, arr2):
@@ -103,33 +107,32 @@ def validate(plan, plan_list):
     - Conflict: First conflict found during the validation process
     """
     agent_i_full = plan[0][0][0]  # Something like 'AgentAt0'
-    # print(agent_i_full)
-    agent_i = int(agent_i_full.split('AgentAt')[-1])  # Extract just the number after 'AgentAt'
-    print("Searching for aget:", agent_i, flush=True)
+    agent_i = int(agent_i_full.split('AgentAt')[-1])
     other_plans = [lst for lst in plan_list if lst is not plan]
     for other_plan in other_plans:
+        if other_plan == plan:
+            continue
         if other_plan == []:
             continue
         agent_j_full = other_plan[0][0][0]
         agent_j = int(agent_j_full.split('AgentAt')[-1])
-
         # Ensure both plans are of equal length
-        plan, other_plan = match_length(plan, other_plan)
+        plan_copy, other_plan = match_length(plan, other_plan)
         for j in range(1, len(plan)):
             # Get current and previous states for both plans
-            agent_state_current = plan[j][0][1]
-            agent_state_previous = plan[j - 1][0][1]
-            box_state_current = plan[j][1][1] if len(plan[j]) > 1 else None
-            box_state_previous = plan[j - 1][1][1] if len(plan[j - 1]) > 1 else None
-
+            agent_state_current = plan_copy[j][0][1]
+            agent_state_previous = plan_copy[j - 1][0][1]
+            box_state_current = plan_copy[j][1][1] if len(plan_copy[j]) > 1 else None
+            box_state_previous = plan_copy[j - 1][1][1] if len(plan_copy[j - 1]) > 1 else None
             other_agent_state_current = other_plan[j][0][1]
+
             other_agent_state_previous = other_plan[j - 1][0][1]
             other_box_state_current = other_plan[j][1][1] if len(other_plan[j]) > 1 else None
             other_box_state_previous = other_plan[j - 1][1][1] if len(other_plan[j - 1]) > 1 else None
-            t=j+1
+            t=j
 
-            box_states_current = [state[1] for state in plan[j][1:] if len(state) > 1]
-            box_names_current = [state[0].split('BoxAt')[-1] for state in plan[j][1:] if len(state) > 1]
+            box_states_current = [state[1] for state in plan_copy[j][1:] if len(state) > 1]
+            box_names_current = [state[0].split('BoxAt')[-1] for state in plan_copy[j][1:] if len(state) > 1]
             other_box_states_previous = [state[1] for state in other_plan[j - 1][1:] if len(state) > 1]
             other_box_states_current = [state[1] for state in other_plan[j][1:] if len(state) > 1]
             other_box_names_current = [state[0].split('BoxAt')[-1] for state in other_plan[j][1:] if len(state) > 1]
@@ -167,6 +170,7 @@ def validate(plan, plan_list):
             
             #Box going into other agent
             for idx, box_current in enumerate(box_states_current):
+                print("Box going into other agent test:", box_current, other_agent_state_current, flush=True)
                 if box_current == other_agent_state_current:
                     conflict = mixedConflict(agent_j, agent_i,box_names_current[idx], box_current, t)
                     return conflict
@@ -233,108 +237,124 @@ def CBS(initial_states):
                 is_single = True
             else:
                 print("Multi agent")
+                print("Solution Plans:", P.paths, flush=True)
                 agents_to_rest(P.plans)
                 solution = [x for x in zip(*P.plans)]
             return solution, is_single  # Found solution, return solution in joint action normal form
         
         print("PAths:", P.paths, flush=True)
         for i, agent_i in enumerate(C.agents):
-            A = copy.deepcopy(P)
-            A.agent = agent_i
-            print("len of A paths", len(P.paths[0]))
-            if len(C.agents) == 2:
-                other_agent = C.agents[1 - i]
-            # Add constraint
-
-            if isinstance(C, EdgeConflict):
-                if i == 1:
-                    A.constraints.append(EdgeConstraint(agent_i, C.v, C.v1, C.t))
-                    # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v, C.v1, C.t)
-                else:
-                    A.constraints.append(EdgeConstraint(agent_i, C.v1, C.v, C.t))
-                    # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v1, C.v, C.t)
-
-            elif isinstance(C, Conflict):
-                A.constraints.append(Constraint(agent_i, C.v, C.t))
-                print("Agent Conflict Added:",agent_i, C.v, C.t, flush=True)
-            elif isinstance(C, mixedConflict): 
-                if A.agent == C.agents[0]:
-                    print("Mixed Agent Conflict Added:",agent_i, C.v, C.t, flush=True)
-                    A.constraints.append(Constraint(agent_i, C.v, C.t))
-                    if P.agent == 1 and C.t >= 26:
-                        print("Agent 1\n\n\n\n")
-                        end = True
-                    #else:
-                    #    A.constraints.append(Constraint(agent_i, C.v, C.t))                      
-                elif A.agent == C.agents[1]:
-                    print("Mixed Box Conflict Added:",agent_i, C.v, C.t, flush=True)
-                    #A.constraints.append(BoxConstraint(agent_i, C.box, C.v, C.t))  
-                    if P.agent == 1 and C.t >= 26:
-                        print("Agent 1\n\n\n\n")
-                        end = True
-                    else:
-                        A.constraints.append(BoxConstraint(agent_i, C.box, C.v, C.t))  
-                            
-            elif isinstance(C, BoxConflict):
-                if A.agent == C.agents[0]:
-                    A.constraints.append(BoxConstraint(agent_i,C.box[0], C.loc_to, C.time))
-                    print("Box Conflict added for:", agent_i,C.loc_to, C.time, flush=True)
-                elif A.agent == C.agents[1]:
-                    A.constraints.append(BoxConstraint(agent_i,C.box[1], C.loc_to, C.time))
-                    print("Box Conflict added for :", agent_i,C.loc_to, C.time, flush=True)
-                # print("appended constraint for agent", agent_i, "parameters (loc, time):", C.v, C.t)
-            
-            # if (other_agent, C.v) in A.goal_states:
-            #     print("other agent in conflict:", other_agent, C.v)
-            #     continue
-
-            # Replan
-            
-            plan_i, path_i = A.get_single_search(agent_i)
-            plan_i = plan_i[0]
-            path_i = path_i[0]
-            if plan_i is None:
+            if agent_i is None:
                 continue
-            print("length of path:", len(path_i))
-            A.plans[agent_i] = plan_i
-            A.paths[agent_i] = path_i
-            # Get cost
-            A.cost = (-agent_i, sum([len(plan) for plan in A.plans]), len(A.constraints))
-            # A.plans, A.paths = agents_to_rest(A.plans, A.paths)
+            else:
+                A = copy.deepcopy(P)
+                A.agent = agent_i
+                print("Initial constraints:", len(A.constraints))
+                print("len of P paths", len(P.paths[0]))
+                if len(C.agents) == 2:
+                    other_agent = C.agents[1 - i]
+                # Add constraint
 
-            # Add node
+                if isinstance(C, EdgeConflict):
+                    if i == 1:
+                        A.constraints.append(EdgeConstraint(agent_i, C.v, C.v1, C.t))
+                        # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v, C.v1, C.t)
+                    else:
+                        A.constraints.append(EdgeConstraint(agent_i, C.v1, C.v, C.t))
+                        # print("appended constraint for agent", agent_i, "parameters (loc_from, loc_to, time):", C.v1, C.v, C.t)
 
-            print("adding node for agent", agent_i)
-            A.plans[int(agent_i)] = plan_i
-            A.paths[int(agent_i)] = path_i
-            #A.cost = (int(agent_i), sum([len(plan) for plan in A.plans]))
-            A.cost = sum([len(plan) for plan in A.plans])
-            # print("Cost for agent", agent_i, ":", A.cost)
-            # print("Adding node to set")
-            #removing duplicates:
-            unique_constraints = set()
-            new_constraints_list = []
-
-            for constraint in A.constraints:
-                # Check if the constraint is a BoxConstraint and adjust the tuple to include the box
-                if isinstance(constraint, BoxConstraint):
-                    constraint_key = (constraint.agent, constraint.loc_to, constraint.time, constraint.box)
-                else:
-                    constraint_key = (constraint.agent, constraint.loc_to, constraint.time)
+                elif isinstance(C, Conflict):
+                    A.constraints.append(Constraint(agent_i, C.v, C.t))
+                    print("Agent Conflict Added:",agent_i, C.v, C.t, flush=True)
+                elif isinstance(C, mixedConflict): 
+                    if A.agent == C.agents[0]:
+                        print("Mixed Agent Conflict Added:",agent_i, C.v, C.t, flush=True)
+                        A.constraints.append(Constraint(agent_i, C.v, C.t))
+                        if A.agent == 0 and C.t >= 26:
+                            print("Agent 1\n\n\n\n")
+                            end = True
+                        #else:
+                        #    A.constraints.append(Constraint(agent_i, C.v, C.t))                      
+                    elif A.agent == C.agents[1]:
+                        print("Mixed Box Conflict Added:",agent_i, C.v, C.t, flush=True)
+                        #Check if constraint already exists
+                        A.constraints.append(BoxConstraint(agent_i, C.box, C.v, C.t))  
+                        if A.agent == 1 and C.t >= 26:
+                            print("Agent 1\n\n\n\n")
+                            end = True
+                        #else:
+                        #    A.constraints.append(BoxConstraint(agent_i, C.box, C.v, C.t))  
+                                
+                elif isinstance(C, BoxConflict):
+                    if A.agent == C.agents[0]:
+                        A.constraints.append(BoxConstraint(agent_i,C.box[0], C.loc_to, C.time))
+                        print("Box Conflict added for:", agent_i,C.box[0],C.loc_to, C.time, flush=True)
+                    elif A.agent == C.agents[1]:
+                        A.constraints.append(BoxConstraint(agent_i,C.box[1], C.loc_to, C.time))
+                        print("Box Conflict added for :", agent_i,C.loc_to, C.time, flush=True)
+                    # print("appended constraint for agent", agent_i, "parameters (loc, time):", C.v, C.t)
                 
-                # Add to the new list only if the tuple is not in the set
-                if constraint_key not in unique_constraints:
-                    unique_constraints.add(constraint_key)
-                    new_constraints_list.append(constraint)
+                # if (other_agent, C.v) in A.goal_states:
+                #     print("other agent in conflict:", other_agent, C.v)
+                #     continue
 
-            A.constraints = new_constraints_list
-            #Printing all constraint information for last two constraints
-            print("All information about child state:", A.agent, A.cost, len(A.constraints))
-            print("All information about parent state:", P.agent, P.cost, len(P.constraints))
+                # Replan
+                
+                plan_i, path_i = A.get_single_search(agent_i)
+                print("Agent", agent_i, "replanned:", path_i, flush=True)
+                plan_i = plan_i[0]
+                path_i = path_i[0]
+                if plan_i is None:
+                    continue
+                print("length of path:", len(path_i))
+                A.plans[agent_i] = plan_i
+                A.paths[agent_i] = path_i
+                # Get cost
+                A.cost = (-agent_i, sum([len(plan) for plan in A.plans]), len(A.constraints))
+                # A.plans, A.paths = agents_to_rest(A.plans, A.paths)
 
-            open_set.add(A)
-            print("open set length:", len(open_set), flush=True)
-            print("Paths:", A.paths)
-            if end:
-                exit()
+                # Add node
+
+                print("adding node for agent", agent_i)
+                A.plans[int(agent_i)] = plan_i
+                A.paths[int(agent_i)] = path_i
+                #A.cost = (int(agent_i), sum([len(plan) for plan in A.plans]))
+                A.cost = max([len(plan) for plan in A.plans])
+                #A.cost = sum([len(plan) for plan in A.plans])
+                # print("Cost for agent", agent_i, ":", A.cost)
+                # print("Adding node to set")
+                #removing duplicates:
+                unique_constraints = set()
+                new_constraints_list = []
+
+                for constraint in A.constraints:
+                    # Check if the constraint is a BoxConstraint and adjust the tuple to include the box
+                    if isinstance(constraint, BoxConstraint):
+                        constraint_key = (constraint.agent, constraint.loc_to, constraint.time, constraint.box)
+                    else:
+                        constraint_key = (constraint.agent, constraint.loc_to, constraint.time)
+                    
+                    # Add to the new list only if the tuple is not in the set
+                    if constraint_key not in unique_constraints:
+                        unique_constraints.add(constraint_key)
+                        new_constraints_list.append(constraint)
+
+                A.constraints = new_constraints_list
+                #Printing all constraint information for last two constraints
+                print("All information about child state:", A.agent, A.cost, len(A.constraints))
+                print("All information about parent state:", P.agent, P.cost, len(P.constraints))
+                print("Constrains now:", len(A.constraints))
+                if P.constraints == A.constraints:
+                    print("Same constraints",flush=True)
+                
+                open_set.add(A)
+                #for node in open_set:
+                #    print("Node in open set:", node.agent, node.cost,len(node.constraints))
+                #    for con in node.constraints:
+                #        print("Constraints in open set:", con.agent, con.loc_to, con.time, con.__hash__(), flush=True)
+                    
+                print("closed set length:", len(closed_set), flush=True)
+                print("Paths:", A.paths)
+                if end:
+                    exit()
     return None

@@ -340,12 +340,13 @@ class State:
     
     def extract_plan(self) -> '[Action, ...]':
         plan = [None for _ in range(self.g)]
-        plan_repr = plan[:]
+        plan_repr = [None for _ in range(self.g+1)]
         state = self
         while state.joint_action is not None:
             plan[state.g - 1] = state.joint_action
-            plan_repr[state.g - 1] = list(sorted(atoms(state)))
+            plan_repr[state.g] = list(sorted(atoms(state)))
             state = state.parent
+        plan_repr[state.g] = list(sorted(atoms(state)))
         return plan, plan_repr
     
     def __hash__(self):
