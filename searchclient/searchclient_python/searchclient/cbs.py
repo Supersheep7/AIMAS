@@ -14,7 +14,7 @@ def plans_from_states(initial_states):
             frontier = FrontierBestFirstWidth(HeuristicBFWS(initial_state))
             searching = search(initial_state, frontier)
             plan, plan_repr = searching
-            plans.append(plan) 
+            plans.append(plan)
             plans_repr.append(plan_repr)
         
         return plans, plans_repr
@@ -36,16 +36,16 @@ class Node():
             for state in self.initial_states:
                 state.constraints = [constraint for constraint in self.constraints if constraint.agent == state.worker_name]
             self.plans, self.paths = plans_from_states(self.initial_states)     # Has to be consistent with constraints
-
-
-        self.goal_states = []
+        self.workers = [state.worker_name for state in self.initial_states]
         self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
     
     def get_single_search(self, single_agent):
+
         state = next((state for state in self.initial_states if state.worker_name == single_agent), None)
         state.constraints = self.constraints
         state = [state]
         return plans_from_states(state)
+    
     def get_constraints_tuple(self):
         # Convert each constraint into a tuple based on its properties
         return tuple(self.constraint_to_tuple(constraint) for constraint in self.constraints)
@@ -110,7 +110,6 @@ def validate(plan, plan_list):
         agent_j_full = other_plan[0][0][0]
         agent_j = int(agent_j_full.split('AgentAt')[-1])
         # Ensure both plans are of equal length
-        plan_copy, other_plan = match_length(plan, other_plan)
         plan_copy, other_plan = match_length(plan, other_plan)
         for j in range(1, len(plan)):
             # Get current and previous states for both plans
@@ -208,6 +207,13 @@ def CBS(initial_states):
     closed_set = set()
     iterations = 0
     end = False
+    priority_lookup = {}
+
+    for worker in root.workers:
+
+        priority_lookup[worker] = len(root.plans[worker])
+
+    
     while open_set:
         filtered_set = [p for p in open_set if p not in closed_set]
         P = min(filtered_set, key=lambda x: (x.cost, x.agent))
@@ -239,17 +245,19 @@ def CBS(initial_states):
                 print("Multi agent")
                 agents_to_rest(P.plans)
                 solution = [x for x in zip(*P.plans)]
-                print(solution)
             return solution, is_single  # Found solution, return solution in joint action normal form
         
         for i, agent_i in enumerate(C.agents):
+
             if agent_i is None:
                 continue
+            
             else:
                 A = copy.deepcopy(P)
                 A.agent = agent_i
                 if len(C.agents) == 2:
                     other_agent = C.agents[1 - i]
+
                 # Add constraint
                 if isinstance(C, Conflict):
                     A.constraints.append(Constraint(agent_i, C.v, C.t))
@@ -303,12 +311,15 @@ def CBS(initial_states):
                 plan_i, path_i = A.get_single_search(agent_i)
                 plan_i = plan_i[0]
                 path_i = path_i[0]
+
                 if plan_i is None:
                     continue
+                
                 A.plans[agent_i] = plan_i
                 A.paths[agent_i] = path_i
+
                 # Get cost
-                A.cost = (agent_i, sum([len(plan) for plan in A.plans]), len(A.constraints), agent_i)
+                A.cost = (priority_lookup[agent_i], agent_i)
                 # A.plans, A.paths = agents_to_rest(A.plans, A.paths)
 
                 #A.cost = (int(agent_i), sum([len(plan) for plan in A.plans]))
@@ -331,6 +342,7 @@ def CBS(initial_states):
                         new_constraints_list.append(constraint)
 
                 A.constraints = new_constraints_list
+                # A.agent_reached_goal = [(agent, len(plan)) for agent, plan in zip(A.workers, A.plans)]
                 # #Printing all constraint information for last two constraints
                 # print("All information about child state:", A.agent, A.cost, len(A.constraints))
                 # print("All information about parent state:", P.agent, P.cost, len(P.constraints))
