@@ -150,7 +150,7 @@ def CBS(initial_states):
 
                 # Get cost
                 plan_lengths = [len(plan) for plan in A.plans]
-                A.cost = (priority_lookup[agent_i], sum(plan_lengths), len(A.constraints))
+                A.cost = (priority_lookup[agent_i], agent_i, sum(plan_lengths), len(A.constraints))
                 
                 #removing duplicates:
                 unique_constraints = set()

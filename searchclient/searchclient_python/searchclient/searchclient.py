@@ -199,9 +199,9 @@ class SearchClient:
            # print("Solutions:", joint_plan, file=sys.stderr, flush=True)
             for joint_action in joint_plan:
                 if is_single:
-                    print("|".join(a.name_ for a in joint_action), flush=True)
+                    print("|".join(a.name_+"@"+a.name for a in joint_action), flush=True)
                 else:
-                    print("|".join(a[0].name_ for a in joint_action), flush=True)
+                    print("|".join(a[0].name_+"@"+a[0].name for a in joint_action), flush=True)
                 # We must read the server's response to not fill up the stdin buffer and block the server.
                 response = server_messages.readline()
 
