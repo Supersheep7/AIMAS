@@ -1,195 +1,13 @@
 import random
 
 from action import Action, ActionType
-
-class Conflict:
-    def __init__(self, ai, aj, v, t):
-        self.ai = ai
-        self.aj = aj
-        self.v = v
-        self.t = t
-        self.agents = [ai, aj]
-
-    def __eq__(self, other):
-        return isinstance(other, Conflict) and \
-               self.ai == other.ai and self.aj == other.aj and \
-               self.v == other.v and self.t == other.t
-
-    def __hash__(self):
-        return hash((self.ai, self.aj, self.v, self.t))
-
-class EdgeConflict(Conflict):
-    def __init__(self, ai, aj, v, v1, t):
-        super().__init__(ai, aj, v, t)
-        self.v1 = v1
-
-    def __eq__(self, other):
-        return isinstance(other, EdgeConflict) and super().__eq__(other) and self.v1 == other.v1
-
-    def __hash__(self):
-        return hash((super().__hash__(), self.v1))
-class AgentFollowConflict:
-    def __init__(self, ai, aj, v, t):
-        self.ai = ai
-        self.aj = aj
-        self.v = v
-        self.t = t
-        self.agents = [ai, aj]
-
-    def __eq__(self, other):
-        return isinstance(other, AgentFollowConflict) and \
-               self.ai == other.ai and self.aj == other.aj and \
-               self.v == other.v and self.t == other.t
-
-    def __hash__(self):
-        return hash((self.ai, self.aj, self.v, self.t))
-class AgentBoxFollowConflict:
-    def __init__(self, ai, aj, box, v, t,follower):
-        self.ai = ai
-        self.aj = aj
-        self.box = box
-        self.v = v
-        self.t = t
-        self.agents = [ai, aj]
-        self.follower = follower
-    
-    def __eq__(self, other):
-        return isinstance(other, AgentBoxFollowConflict) and \
-               self.ai == other.ai and self.aj == other.aj and \
-               self.box == other.box and self.v == other.v and self.t == other.t
-    def __hash__(self):
-        return hash((self.ai, self.aj, self.box, self.v, self.t))
-class BoxBoxFollowConflict:
-    def __init__(self, ai, aj, box_i, box_j, v, t):
-        self.ai = ai
-        self.aj = aj
-        self.box = [box_i, box_j]
-        self.v = v
-        self.t = t
-        self.agents = [ai, aj]
-    
-    def __eq__(self, other):
-        return isinstance(other, BoxBoxFollowConflict) and \
-               self.ai == other.ai and self.aj == other.aj and \
-               self.box == other.box and self.v == other.v and self.t == other.t
-    def __hash__(self):
-        return hash((self.ai, self.aj, self.box, self.v, self.t))
-class BoxConflict:
-    def __init__(self, agent_i,agent_j, box_i,box_j, loc_to, time):
-        self.agents = [agent_i, agent_j]
-        self.box = [box_i, box_j]
-        self.loc_to = loc_to
-        self.time = time
-
-    def __eq__(self, other):
-        return isinstance(other, BoxConflict) and \
-               self.agents == other.agents and self.box == other.box and \
-               self.loc_to == other.loc_to and self.time == other.time
-
-    def __hash__(self):
-        return hash((self.agents, self.box, self.loc_to, self.time))
-
-class mixedConflict:
-    def __init__(self, ai, aj, box, v, t):
-        self.ai = ai
-        self.aj = aj
-        self.box = box
-        self.v = v
-        self.t = t
-        self.agents = [ai, aj]
-
-    def __eq__(self, other):
-        return isinstance(other, mixedConflict) and \
-               self.ai == other.ai and self.aj == other.aj and \
-               self.box == other.box and self.v == other.v and self.t == other.t
-
-    def __hash__(self):
-        return hash((self.ai, self.aj, self.box, self.v, self.t))
-
-class Constraint:
-    def __init__(self, agent, loc_to, time):
-        self.agent = agent
-        self.loc_to = loc_to
-        self.time = time
-
-    def __eq__(self, other):
-        return isinstance(other, Constraint) and \
-               self.agent == other.agent and self.loc_to == other.loc_to and self.time == other.time
-
-    def __hash__(self):
-        return hash((self.agent, self.loc_to, self.time))
-
-class EdgeConstraint(Constraint):
-    def __init__(self, agent, loc_from, loc_to, time):
-        super().__init__(agent, loc_to, time)
-        self.loc_from = loc_from
-
-    def __eq__(self, other):
-        return isinstance(other, EdgeConstraint) and super().__eq__(other) and \
-               self.loc_from == other.loc_from
-
-    def __hash__(self):
-        return hash((super().__hash__(), self.loc_from))
-
-class BoxConstraint:
-    def __init__(self, agent, box, loc_to, time):
-        self.agent = agent
-        self.box = box
-        self.loc_to = loc_to
-        self.time = time
-
-    def __eq__(self, other):
-        return isinstance(other, BoxConstraint) and \
-               self.agent == other.agent and self.box == other.box and \
-               self.loc_to == other.loc_to and self.time == other.time
-
-    def __hash__(self):
-        return hash((self.agent, self.box, self.loc_to, self.time))
-
-def atoms(state: 'State'):
-        """
-        Generates a set of atoms that represent the current state.
-
-        Args:
-        - state (State): The current state of the environment.
-
-        Returns:
-        - Set[Tuple[str, Tuple[int, int]]]: A set of tuples representing the state atoms.
-        """
-        atoms = set()
-        for index, row, col in zip(str(state.worker_name), state.agent_rows, state.agent_cols):
-            atoms.add((f'AgentAt{index}', (row, col)))
-
-        for (row_index, row) in enumerate(state.boxes):
-            for col_index, box in enumerate(row):
-                if box:  
-                    atoms.add((f'BoxAt{box}', (row_index, col_index)))
-
-        return frozenset(atoms)     # Need the frozenset so I can add the state representation to the novelty set
+from conflictmodule import Constraint, BoxConstraint
 
 class State:
     _RNG = random.Random(1)
     
     def __init__(self, agent_rows, agent_cols, boxes, goals, worker_name, constraints = None):
-        '''
-        Constructs an initial state.
-        Arguments are not copied, and therefore should not be modified after being passed in.
         
-        The lists walls, boxes, and goals are indexed from top-left of the level, row-major order (row, col).
-               Col 0  Col 1  Col 2  Col 3
-        Row 0: (0,0)  (0,1)  (0,2)  (0,3)  ...
-        Row 1: (1,0)  (1,1)  (1,2)  (1,3)  ...
-        Row 2: (2,0)  (2,1)  (2,2)  (2,3)  ...
-        ...
-        
-        For example, State.walls[2] is a list of booleans for the third row.
-        State.walls[row][col] is True if there's a wall at (row, col).
-        
-        The agent rows and columns are indexed by the agent number.
-        For example, State.agent_rows[0] is the row location of agent '0'.
-                
-        Note: The state should be considered immutable after it has been hashed, e.g. added to a dictionary or set.
-        '''
         self.worker_name = int(worker_name)
         self.agent_rows = agent_rows
         self.agent_cols = agent_cols
@@ -200,12 +18,32 @@ class State:
         self._hash = None
         self.constraint_step = False
         self.constraints = constraints if constraints else []
-        ''' We passed the goals to the state to account for goal decomposition '''
-
         self.goals = goals
         self.w = 1
+        def atoms(self):
+            """
+            Generates a set of atoms that represent the current state.
+
+            Args:
+            - state (State): The current state of the environment.
+
+            Returns:
+            - Set[Tuple[str, Tuple[int, int]]]: A set of tuples representing the state atoms.
+            """
+            atoms = set()
+            for index, row, col in zip(str(self.worker_name), self.agent_rows, self.agent_cols):
+                atoms.add((f'AgentAt{index}', (row, col)))
+
+            for (row_index, row) in enumerate(self.boxes):
+                for col_index, box in enumerate(row):
+                    if box:  
+                        atoms.add((f'BoxAt{box}', (row_index, col_index)))
+
+            return frozenset(atoms)     # Need the frozenset so I can add the state representation to the novelty set
+        self.atoms = atoms(self)
     
     def result(self, joint_action: '[Action, ...]') -> 'State':
+
         '''
         Returns the state resulting from applying joint_action in this state.
         Precondition: Joint action must be applicable and non-conflicting in this state.
@@ -244,12 +82,9 @@ class State:
         copy_state.g = self.g + 1
         copy_state.constraints = self.constraints[:]
         copy_state.constraint_step = False
+        
         for constraint in copy_state.constraints:
-            if isinstance(constraint, EdgeConstraint):
-                if constraint.time == copy_state.g and (self.agent_rows[0], self.agent_cols[0]) == constraint.loc_from \
-                    and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to:
-                    copy_state.constraint_step = True
-            elif isinstance(constraint, Constraint):
+            if isinstance(constraint, Constraint):
                 if (constraint.time == copy_state.g and (copy_agent_rows[0], copy_agent_cols[0]) == constraint.loc_to):
                     copy_state.constraint_step = True
             elif isinstance(constraint, BoxConstraint) and constraint.time == copy_state.g and copy_boxes[constraint.loc_to[0]][constraint.loc_to[1]] != '':
@@ -382,10 +217,10 @@ class State:
         state = self
         while state.joint_action is not None:
             plan[state.g - 1] = state.joint_action
-            plan_repr[state.g] = list(sorted(atoms(state)))
+            plan_repr[state.g] = list(sorted(state.atoms))
             state = state.parent
         # state.joint_action is None. State should be state.parent of first joint_action
-        plan_repr[state.g] = list(sorted(atoms(state)))
+        plan_repr[state.g] = list(sorted(state.atoms))
         return plan, plan_repr
     
     def __hash__(self):

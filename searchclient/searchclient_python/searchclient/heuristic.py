@@ -1,8 +1,8 @@
-from abc import ABCMeta, abstractmethod
-from collections import Counter, deque
-from state import atoms
+from abc import ABCMeta
+from collections import deque
 import numpy as np
 import string   
+from utils import manhattan
 
 class Heuristic(metaclass=ABCMeta):
     def __init__(self, initial_state: 'State'):
@@ -14,7 +14,6 @@ class Heuristic(metaclass=ABCMeta):
         self.alphabet = string.ascii_uppercase
         self.latest_state = initial_state
         self.novelty_sets = []                             # We assume PDDL tuples
-        self.w = 1
 
         def get_neighbors(grid, pos):
             
@@ -80,9 +79,6 @@ class Heuristic(metaclass=ABCMeta):
             else:
                 self.grids[goal_name] = get_path(self.wall_matrix, goal_pos)
     
-    # Manhattan
-    def manhattan(self, agent, goal):
-        return abs(agent[0] - goal[0]) + abs(agent[1] - goal[1])
 
     def h(self, state: 'State') -> 'int':
         
@@ -110,7 +106,7 @@ class Heuristic(metaclass=ABCMeta):
                 grid = np.array(grid)
                 ''' If we want to add nearest box heuristic in the mix '''
                 count0 += grid[box[1][0]][box[1][1]]
-                count1 += self.manhattan((box[1][0], box[1][1]), (state.agent_rows[0], state.agent_cols[0]))
+                count1 += manhattan((box[1][0], box[1][1]), (state.agent_rows[0], state.agent_cols[0]))
 
             return (count0, count1)
 
@@ -123,26 +119,17 @@ class Heuristic(metaclass=ABCMeta):
                 agent_pos = (agent_row, agent_col)
                 if agent_num in self.grids:
                     grid = self.grids[agent_num]
-                    # count += grid[agent_pos]
-                    agents.append(grid[agent_pos])
-                    count = max(agents)
+                    count += grid[agent_pos]
+                    # agents.append(grid[agent_pos])
+                    # count = max(agents)
                 else: 
-                    count += self.manhattan(agent_pos, (agent_num, agent_num))
+                    count += manhattan(agent_pos, (agent_num, agent_num))
 
             return int(count)
 
     def get_w(self, explored, state: 'State') -> 'int':
-        
-        ''' For efficiency,
-        as discussed before, we don’t compute the value
-        w(s) exactly. Instead, except when stated otherwise, we just
-        determine whether w(s) is 1 or greater than 1. As a result, a
-        state s will not be preferred to a state s' when the two states
-        have the same heuristic values and both states have novelty
-        measures greater than 1. 
-        '''
 
-        state_repr = atoms(state)
+        state_repr = state.atoms
 
         if state_repr not in explored:        # If one atom is novel
             state.w = 0
@@ -152,66 +139,18 @@ class Heuristic(metaclass=ABCMeta):
 
         return
 
-    @abstractmethod
-    def f(self, state: 'State') -> 'int': pass
-    
-    @abstractmethod
-    def __repr__(self): raise NotImplementedError
-
-class HeuristicAStar(Heuristic):
-    def __init__(self, initial_state: 'State'):
-        super().__init__(initial_state)
-    
-    def f(self, state: 'State') -> 'int':
-        return state.g + self.h(state)
-    
-    def __repr__(self):
-        return 'A* evaluation'
-
-class HeuristicWeightedAStar(Heuristic):
-    def __init__(self, initial_state: 'State', w: 'int'):
-        super().__init__(initial_state)
-        self.w = w
-    
-    def f(self, state: 'State') -> 'int':
-        return state.g + self.w * self.h(state)
-    
-    def __repr__(self):
-        return 'WA*({}) evaluation'.format(self.w)
-
-class HeuristicGreedy(Heuristic):
-    def __init__(self, initial_state: 'State'):
-        super().__init__(initial_state)
-    
-    def f(self, state: 'State') -> 'int':
-        return self.h(state)
-    
-    def __repr__(self):
-        return 'greedy evaluation'
-
-# Greedy BFWS
+# Mixed BFWS
 
 class HeuristicBFWS(Heuristic):
     def __init__(self, initial_state: 'State'):
         super().__init__(initial_state)
-    
-    '''
-    Remarkably, however, BFWS with evaluation function
-    f2 = <w, h>, where the preference order between heuristics
-    and novelties are reversed, performs much better than
-    both BFWS(f1) with f1 = <h,w> and GBFS-W. The preferred
-    states in f2 = <w, h> are not picked among the ones
-    with lowest h but among those with lowest novelty measure
-    w(s) = wh(s), with the heuristic h being used as a
-    tie breaker.
-    '''
 
     def f(self, state: 'State') -> 'int':
         heuristic_value = self.h(state)
-        if type(heuristic_value) == int:
-            return (state.g + heuristic_value)
+        if type(heuristic_value) == int:        # MAPF, we can be greedy
+            return (heuristic_value)
         else:
-            return ((state.w, heuristic_value[0], heuristic_value[1]))
+            return ((state.w + heuristic_value[0], heuristic_value[1]))     # Boxes, incomplete, we have to add width/g to avoid loops
     
     def __repr__(self):
         return 'BFWS evaluation'

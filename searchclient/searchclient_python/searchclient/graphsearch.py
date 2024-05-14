@@ -1,10 +1,7 @@
 import memory
 import time
 import sys
-
 from action import Action
-from state import atoms
-
 
 globals().update(Action.__members__)
 
@@ -14,9 +11,8 @@ def search(initial_state, frontier):
        
         iterations = 0
 
-        frontier.explored.append(atoms(initial_state))
+        frontier.explored.append(initial_state.atoms)
         frontier.add(initial_state)
-        # print("Started search for worker", initial_state.worker_name)
 
         while True:
             iterations += 1
@@ -29,7 +25,6 @@ def search(initial_state, frontier):
                 return None
 
             if frontier.is_empty():
-                # print("Big bomboclat for", initial_state.worker_name)
                 plan, plan_repr = None, None
                 return plan, plan_repr
             
@@ -38,36 +33,22 @@ def search(initial_state, frontier):
             current_constraints = current_state.constraints
             constraint_times = [constraint.time for constraint in current_constraints]
             longest_time = 0
+
             if constraint_times:
                 longest_time = max(constraint_times)
-            constraint_locations = [(constraint.loc_to) for constraint in current_constraints]
-            # print("Current constraint times:", constraint_times, flush=True)
-            # print("Current constraint locations:", [(constraint.loc_from, constraint.loc_to) for constraint in current_constraints], flush=True)
-            is_constraint_step = None
-            #if (current_state.agent_cols, current_state.agent_rows) == ([3],[2]) and current_state.worker_name == "worker1":
-            #    print("LOOK FOR CONSTRAINTS\n\n\n\n coords:", current_state.worker_name, current_state.agent_cols, current_state.agent_rows, flush=True)
-            # print(current_state.worker_name, current_state.agent_cols, current_state.agent_rows)
 
             if current_state.is_goal_state() and current_time > longest_time:
                 plan, plan_repr = current_state.extract_plan()
-                return plan, plan_repr   
-                      
+                return plan, plan_repr  
 
             expanded_states = current_state.get_expanded_states()
 
-            frontier.explored.append(atoms(current_state))
+            frontier.explored.append(current_state.atoms)
 
             for child_state in expanded_states:
-                #if current_state.agent_rows == [3] and current_state.agent_cols == [5] and current_state.worker_name == 1:
-                    #print("Child state:",child_state.agent_cols, child_state.agent_rows, current_time-1, flush=True)
-                # print(child_state.agent_rows, child_state.agent_cols, child_state.constraint_step)
-                # print("Child state:",child_state.agent_cols, child_state.agent_rows, current_time-1, flush=True)
+                
                 if not frontier.contains(child_state) and child_state.constraint_step == False:
-                #    print("Added to frontier", flush=True)
-                    frontier.add(child_state)
-                                
-            # print_search_status(explored, frontier)
-        
+                    frontier.add(child_state)        
 
 def print_search_status(explored, frontier):
     status_template = '#Expanded: {:8,}, #Frontier: {:8,}, #Generated: {:8,}, Time: {:3.3f} s\n[Alloc: {:4.2f} MB, MaxAlloc: {:4.2f} MB]'
