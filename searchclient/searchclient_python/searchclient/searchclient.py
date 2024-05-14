@@ -11,7 +11,7 @@ class SearchClient:
 
     ''' We will use this function for multi-agent levels '''
     @staticmethod
-    def parse_filtered_levels(server_messages) -> 'list': 
+    def parse_filtered_levels(server_messages): 
         
         initial_states = []
 
@@ -162,7 +162,7 @@ class SearchClient:
     
     @staticmethod
 
-    def print_search_status(start_time: 'int', explored: '{State, ...}', frontier: 'Frontier') -> None:
+    def print_search_status(start_time, explored, frontier):
         status_template = '#Expanded: {:8,}, #Frontier: {:8,}, #Generated: {:8,}, Time: {:3.3f} s\n[Alloc: {:4.2f} MB, MaxAlloc: {:4.2f} MB]'
         elapsed_time = time.perf_counter() - start_time
         print(status_template.format(len(explored), frontier.size(), len(explored) + frontier.size(), elapsed_time, memory.get_usage(), memory.max_usage), file=sys.stderr, flush=True)

@@ -42,7 +42,7 @@ class State:
             return frozenset(atoms)     # Need the frozenset so I can add the state representation to the novelty set
         self.atoms = atoms(self)
     
-    def result(self, joint_action: '[Action, ...]') -> 'State':
+    def result(self, joint_action):
 
         '''
         Returns the state resulting from applying joint_action in this state.
@@ -92,7 +92,7 @@ class State:
 
         return copy_state
     
-    def is_goal_state(self) -> 'bool':
+    def is_goal_state(self):
         
         for row in range(len(self.goals)):
             for col in range(len(self.goals[row])):
@@ -103,7 +103,7 @@ class State:
                     return False
         return True
     
-    def get_expanded_states(self) -> '[State, ...]':
+    def get_expanded_states(self):
         num_agents = len(self.agent_rows)
         
         # Determine list of applicable action for each individual agent.
@@ -137,7 +137,7 @@ class State:
         State._RNG.shuffle(expanded_states)
         return expanded_states
     
-    def is_applicable(self, agent: 'int', action: 'Action') -> 'bool':
+    def is_applicable(self, agent, action):
         agent_row = self.agent_rows[agent]
         agent_col = self.agent_cols[agent]
         
@@ -163,7 +163,7 @@ class State:
             box_col =  agent_col - action.box_col_delta
             return self.boxes[box_row][box_col] != '' and self.is_free(destination_row, destination_col, self.g + 1)
                 
-    def is_conflicting(self, joint_action: '[Action, ...]') -> 'bool':
+    def is_conflicting(self, joint_action):
         num_agents = len(self.agent_rows)
         
         destination_rows = [None for _ in range(num_agents)] # row of new cell to become occupied by action
@@ -200,18 +200,18 @@ class State:
                         
         return False
     
-    def is_free(self, row: 'int', col: 'int', time:'int' = 0) -> 'bool':
+    def is_free(self, row, col, time = 0):
         if State.walls[row][col] or self.boxes[row][col] != '' or self.agent_at(row, col) is not None:
             return False
         return True
     
-    def agent_at(self, row: 'int', col: 'int') -> 'char':
+    def agent_at(self, row, col):
         for agent in range(len(self.agent_rows)):
             if self.agent_rows[agent] == row and self.agent_cols[agent] == col:
                 return chr(agent + ord('0'))
         return None
     
-    def extract_plan(self) -> '[Action, ...]':
+    def extract_plan(self):
         plan = [None for _ in range(self.g)]
         plan_repr = [None for _ in range(self.g + 1)]
         state = self
