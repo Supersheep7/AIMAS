@@ -101,7 +101,7 @@ def CBS(initial_states):
         open_set.remove(P)
         closed_set.add(P)
 
-        print("#Opening node with cost", P.cost, "agent", P.agent, "No of Constraint of the node:", len(P.constraints),\
+        print("#Opening node with cost", P.cost, "agent", P.agent, \
             "explored nodes", len(closed_set), "frontier size", len(filtered_set), "Longest path:", len(P.paths[0]), flush=True)
         
         for path in P.paths:
@@ -150,7 +150,7 @@ def CBS(initial_states):
 
                 # Get cost
                 plan_lengths = [len(plan) for plan in A.plans]
-                A.cost = (priority_lookup[agent_i], agent_i, sum(plan_lengths), len(A.constraints))
+                A.cost = (-priority_lookup[agent_i], agent_i, sum(plan_lengths), len(A.constraints))
                 
                 #removing duplicates:
                 unique_constraints = set()

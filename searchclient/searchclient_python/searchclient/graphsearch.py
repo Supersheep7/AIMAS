@@ -31,15 +31,19 @@ def search(initial_state, frontier):
             current_state = frontier.pop()
             current_time = current_state.g+1
             current_constraints = current_state.constraints
-            constraint_times = [constraint.time for constraint in current_constraints]
-            longest_time = 0
+            sorted_constraints = sorted(current_constraints, key=lambda x: x.time)
 
-            if constraint_times:
-                longest_time = max(constraint_times)
-
-            if current_state.is_goal_state() and current_time > longest_time:
-                plan, plan_repr = current_state.extract_plan()
-                return plan, plan_repr  
+            # Plan from constraints
+            if len(sorted_constraints) > 0:
+                if current_state.is_goal_state() and current_time > sorted_constraints[-1].time:
+                    plan, plan_repr = current_state.extract_plan()
+                    return plan, plan_repr 
+            # Plan no constraint
+            else:
+                if current_state.is_goal_state():
+                    plan, plan_repr = current_state.extract_plan()
+                    return plan, plan_repr 
+                     
 
             expanded_states = current_state.get_expanded_states()
 

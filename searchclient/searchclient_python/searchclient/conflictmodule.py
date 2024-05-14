@@ -99,6 +99,15 @@ class mixedConflict:
     def __hash__(self):
         return hash((self.ai, self.aj, self.box, self.v, self.t))
     
+class whatConflict:
+    def __init__(self, ai, aj, box, loc_from, loc_to, t):
+        self.ai = ai
+        self.aj = aj
+        self.box = box
+        self.loc_from = loc_from
+        self.loc_to = loc_to
+        self.t = t
+    
 ''' Defining Constraints '''
 
 class Constraint:
@@ -252,13 +261,6 @@ def validate(plan, plan_list):
             if agent_state_current == other_agent_state_previous:
                 conflict = AgentFollowConflict(agent_i, agent_j, agent_state_current, t)
                 return conflict
-            
-            # Box going into other Box
-            for idx, box_current in enumerate(box_states_current):
-                for other_idx, other_box_current in enumerate(other_box_states_current):
-                    if box_current == other_box_current:
-                        conflict = BoxConflict(agent_i, agent_j, box_names_current[idx], other_box_names_current[other_idx], box_current, t)
-                        return conflict
                     
             #Agent going into other box
             for idx, other_box_current in enumerate(other_box_states_current):
@@ -289,6 +291,12 @@ def validate(plan, plan_list):
                 if box_current == other_agent_state_previous:
                     return AgentBoxFollowConflict(agent_j, agent_i, box_names_current[idx], box_current, t,1)
 
+            # Box going into other Box
+            for idx, box_current in enumerate(box_states_current):
+                for other_idx, other_box_current in enumerate(other_box_states_current):
+                    if box_current == other_box_current:
+                        conflict = BoxConflict(agent_i, agent_j, box_names_current[idx], other_box_names_current[other_idx], box_current, t)
+                        return conflict
     return None    
 
 # Used in CBS line 136 - > A = add_constraint(C, A, agent_i)
