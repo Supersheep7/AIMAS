@@ -16,12 +16,12 @@ class Node():
             # Select worker for a singleton search
             state = next((state for state in self.initial_states if state.worker_name == single_agent), None)
             state = [state]
-            self.plans, self.paths = self.plans_from_states(state) # Has to be consistent with constraints
+            self.plans, self.paths, self.priorities = self.plans_from_states(state) # Has to be consistent with constraints
             state[0].constraints = self.constraints
         else:
             for state in self.initial_states:
                 state.constraints = [constraint for constraint in self.constraints if constraint.agent == state.worker_name]
-            self.plans, self.paths = self.plans_from_states(self.initial_states)     # Has to be consistent with constraints
+            self.plans, self.paths, self.priorities = self.plans_from_states(self.initial_states)     # Has to be consistent with constraints
         self.workers = [state.worker_name for state in self.initial_states]
         self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
 
@@ -32,11 +32,12 @@ class Node():
         for state in states:
             frontier = FrontierBestFirstWidth(HeuristicBFWS(state))
             searching = search(state, frontier)
-            plan, plan_repr = searching
+            print("#",searching[2])
+            plan, plan_repr, priority = searching
             plans.append(plan)
             plans_repr.append(plan_repr)
         
-        return plans, plans_repr
+        return plans, plans_repr, priority
 
     def get_single_search(self, single_agent):
 
@@ -138,7 +139,7 @@ def CBS(initial_states):
 
                 # Replan
                 
-                plan_i, path_i = A.get_single_search(agent_i)
+                plan_i, path_i, priority = A.get_single_search(agent_i)
                 plan_i = plan_i[0]
                 path_i = path_i[0]
 

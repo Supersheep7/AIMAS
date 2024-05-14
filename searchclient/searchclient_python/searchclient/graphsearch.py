@@ -25,24 +25,31 @@ def search(initial_state, frontier):
                 return None
 
             if frontier.is_empty():
-                plan, plan_repr = None, None
-                return plan, plan_repr
+                plan, plan_repr, priority = None, None, None
+                return plan, plan_repr, priority
             
             current_state = frontier.pop()
             current_time = current_state.g+1
             current_constraints = current_state.constraints
             sorted_constraints = sorted(current_constraints, key=lambda x: x.time)
+            constraint_atoms = [(constraint.loc_to) for constraint in sorted_constraints]
+            current_state_atom = ((current_state.agent_rows[0], current_state.agent_cols[0]))
+            priority = 1
 
             # Plan from constraints
             if len(sorted_constraints) > 0:
+                if current_state.is_goal_state() and current_state_atom in constraint_atoms:
+                    priority = 0
+                
                 if current_state.is_goal_state() and current_time > sorted_constraints[-1].time:
                     plan, plan_repr = current_state.extract_plan()
-                    return plan, plan_repr 
+                    return plan, plan_repr, priority
+            
             # Plan no constraint
             else:
                 if current_state.is_goal_state():
                     plan, plan_repr = current_state.extract_plan()
-                    return plan, plan_repr 
+                    return plan, plan_repr, priority
                      
 
             expanded_states = current_state.get_expanded_states()
