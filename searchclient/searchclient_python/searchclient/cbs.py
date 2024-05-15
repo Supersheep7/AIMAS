@@ -81,6 +81,8 @@ class Node():
 
 def CBS(initial_states):
 
+    ''' Setup search '''
+
     is_single = False
     root = Node(initial_states)
     root.agent = None
@@ -89,9 +91,10 @@ def CBS(initial_states):
     closed_set = set()
     iterations = 0
     path_rank = {}
+    goal_conflict_rank = {} 
     C = None
 
-    goal_conflict_rank = {} 
+    ''' Prepare lookup tables for agent rank '''
 
     for worker in root.workers:
         goal_conflict_rank[worker] = 0
@@ -111,6 +114,8 @@ def CBS(initial_states):
                 if element in cells:
                     goal_conflict_rank[worker] += 1
     
+    ''' Start search '''
+
     while open_set:
         iterations += 1
         filtered_set = [p for p in open_set if p not in closed_set]
@@ -120,7 +125,6 @@ def CBS(initial_states):
 
         print("#Opening node cost", P.cost, "agent", P.agent, \
             "explored", len(closed_set), "frontier", len(filtered_set), flush=True)
-
 
         for path in P.paths:
             C = validate(path, P.paths) # Consistent path needs to be valid
@@ -149,13 +153,11 @@ def CBS(initial_states):
                 A.agent = agent_i
                 
                 # Add constraint
-
                 A = add_constraint(C, A, agent_i)
                 if A == None:
                     continue
 
-                # Replan
-                
+                # Replan    
                 plan_i, path_i = A.get_single_search(agent_i)
                 plan_i = plan_i[0]
                 path_i = path_i[0]
