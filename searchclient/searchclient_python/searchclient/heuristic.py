@@ -88,7 +88,6 @@ class Heuristic(metaclass=ABCMeta):
 
         return count
     
-
     def h(self, state: 'State') -> 'int':
         
         count0 = 0
@@ -116,15 +115,21 @@ class Heuristic(metaclass=ABCMeta):
                 manhattan_distance = manhattan((box[1][0], box[1][1]), (state.agent_rows[0], state.agent_cols[0]))
                 count1 += manhattan_distance
 
-            if count0 == 0:
+            if count0 == 0 and not state.is_goal_state():
                 count = int(self.pathfinding(state))
                 return count
+            
+            elif count0 == 0 and state.is_goal_state():
+                return 0
 
             return (count0, count1)
 
         # Default to pathfinding
         else:
-            self.pathfinding(state)
+            if state.is_goal_state():
+                return 0
+            count = self.pathfinding(state)
+            return (int(count))
 
     def get_w(self, explored, state: 'State') -> 'int':
 
@@ -157,7 +162,6 @@ class HeuristicBFWS(Heuristic):
     def f(self, state: 'State') -> 'int':
         heuristic_value = self.h(state)
         if type(heuristic_value) == int:        # MAPF, we can be greedy
-            print("#mapf", flush=True)
             return (-1/(heuristic_value+1), -1/(heuristic_value+1))
         else:
             f = ((state.r + heuristic_value[0], heuristic_value[1]))

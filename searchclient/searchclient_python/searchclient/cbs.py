@@ -4,6 +4,7 @@ from graphsearch import search
 from action import Action
 import copy
 from conflictmodule import validate, add_constraint
+import random
 
 class Node():
 
@@ -24,6 +25,7 @@ class Node():
             self.plans, self.paths = self.plans_from_states(self.initial_states)     # Has to be consistent with constraints
         self.workers = [state.worker_name for state in self.initial_states]
         self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
+        print("#",len(self.workers))
 
     def plans_from_states(self, states):
 
@@ -119,6 +121,9 @@ def CBS(initial_states):
     while open_set:
         iterations += 1
         filtered_set = [p for p in open_set if p not in closed_set]
+
+        random.shuffle(filtered_set)
+
         P = min(filtered_set, key=lambda x: (x.cost))
         open_set.remove(P)
         closed_set.add(P)
@@ -144,11 +149,11 @@ def CBS(initial_states):
         
         # Deal with one conflict at a time
         for i, agent_i in enumerate(C.agents):
-
             if agent_i is None:
                 continue
             
             else:
+                print("#", vars(C), C)
                 A = copy.deepcopy(P)
                 A.agent = agent_i
                 
@@ -161,7 +166,6 @@ def CBS(initial_states):
                 plan_i, path_i = A.get_single_search(agent_i)
                 plan_i = plan_i[0]
                 path_i = path_i[0]
-
                 if plan_i is None:
                     continue
                 
@@ -170,8 +174,17 @@ def CBS(initial_states):
 
                 # Get cost
                 plan_lengths = [len(plan) for plan in A.plans]
-                A.cost = (goal_conflict_rank[agent_i], path_rank[agent_i], agent_i, sum(plan_lengths), len(A.constraints))
+                A.cost = (goal_conflict_rank[agent_i], path_rank[agent_i], agent_i ,sum(plan_lengths), len(A.constraints))
                 
+                ''' 
+                Agent with less conflicts in first plan's goal state
+                    Tie break for agents with the longest path
+                        Tie break in lexicographic order
+                            Tie break for compound plans
+                                Tie break for length of constraints
+
+                '''
+
                 #removing duplicates:
                 unique_constraints = set()
                 new_constraints_list = []

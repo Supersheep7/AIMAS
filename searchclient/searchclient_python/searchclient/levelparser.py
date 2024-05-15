@@ -76,18 +76,19 @@ def parse(server_messages):
 
         workers = []
         movable_boxes = []
-
-        for team in teams: 
+        teams = sorted(teams, key=lambda x: x[1])
+        for team in teams:
             color = team[0]
             agents = team[1]
             movable = team[2]
             movable_boxes.append(movable)
+            if len(agents) == 0 and len(movable) > 0:
+                movable_boxes.remove(movable)
             for agent in agents:
                 workers.append(Worker(color, agent, movable, num_cols, num_rows))
 
         movable_boxes = [element for sublist in movable_boxes for element in sublist]
         walls = [[False for _ in range(num_cols)] for _ in range(num_rows)]
-
         # While we build the level representation we put goals and boxes in a set
         # to be assigned later at each worker
 
@@ -152,12 +153,12 @@ def parse(server_messages):
             chosen_worker = None
 
             for _ in range(len(workers)):
+                current_worker_index = (current_worker_index + 1) % len(workers) 
                 if box[0] in workers[current_worker_index].movable:
                     chosen_worker = workers[current_worker_index]
-                current_worker_index = (current_worker_index + 1) % len(workers) 
-                chosen_worker.boxes[row][col] = box[0]
-                workers[current_worker_index] = chosen_worker
-                break
+                    chosen_worker.boxes[row][col] = box[0]
+                    workers[current_worker_index] = chosen_worker
+        
 
         State.agent_colors = agent_colors
         State.walls = walls
@@ -168,7 +169,7 @@ def parse(server_messages):
         for worker in workers:
             stringoals = ''.join([str(element) for row in worker.goals for element in row]) 
             if len(stringoals) < 1: # Has no goals
-                worker.goals[worker.agent_rows[0]][worker.agent_cols[0]] = worker.name 
+                worker.goals[worker.agent_rows[0]][worker.agent_cols[0]] = worker.name
             initial_states.append(State(worker.agent_rows, worker.agent_cols, worker.boxes, worker.goals, worker.name))
             print("#Initialized state for worker Name", worker.name, flush=True)
 
