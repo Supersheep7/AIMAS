@@ -155,8 +155,11 @@ class SearchClient:
         ''' We finished the state building for a single worker '''
 
         for worker in workers:
-            print("#Initialized state for worker Name", worker.name, flush=True)
+            stringoals = ''.join([str(element) for row in worker.goals for element in row]) 
+            if len(stringoals) < 1: # Has no goals
+                worker.goals[worker.agent_rows[0]][worker.agent_cols[0]] = worker.name 
             initial_states.append(State(worker.agent_rows, worker.agent_cols, worker.boxes, worker.goals, worker.name))
+            print("#Initialized state for worker Name", worker.name, flush=True)
 
         return initial_states
     

@@ -16,12 +16,12 @@ class Node():
             # Select worker for a singleton search
             state = next((state for state in self.initial_states if state.worker_name == single_agent), None)
             state = [state]
-            self.plans, self.paths, self.priorities = self.plans_from_states(state) # Has to be consistent with constraints
+            self.plans, self.paths = self.plans_from_states(state) # Has to be consistent with constraints
             state[0].constraints = self.constraints
         else:
             for state in self.initial_states:
                 state.constraints = [constraint for constraint in self.constraints if constraint.agent == state.worker_name]
-            self.plans, self.paths, self.priorities = self.plans_from_states(self.initial_states)     # Has to be consistent with constraints
+            self.plans, self.paths = self.plans_from_states(self.initial_states)     # Has to be consistent with constraints
         self.workers = [state.worker_name for state in self.initial_states]
         self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
 
@@ -32,12 +32,11 @@ class Node():
         for state in states:
             frontier = FrontierBestFirstWidth(HeuristicBFWS(state))
             searching = search(state, frontier)
-            print("#",searching[2])
-            plan, plan_repr, priority = searching
+            plan, plan_repr = searching
             plans.append(plan)
             plans_repr.append(plan_repr)
         
-        return plans, plans_repr, priority
+        return plans, plans_repr
 
     def get_single_search(self, single_agent):
 
@@ -89,12 +88,29 @@ def CBS(initial_states):
     open_set.add(root)
     closed_set = set()
     iterations = 0
-    priority_lookup = {}
+    path_rank = {}
     C = None
-    
-    for worker in root.workers:
-        priority_lookup[worker] = len(root.plans[worker])
 
+    goal_conflict_rank = {} 
+
+    for worker in root.workers:
+        goal_conflict_rank[worker] = 0
+        path_rank[worker] = len(root.plans[worker])
+
+    for worker, path in zip(root.workers, root.paths):
+        steps = [step for step in path]
+        tuplez = [list(y for _, y in sublist) for sublist in steps]
+        cells = []
+        [cells.extend(sublist) for sublist in tuplez]
+        for other_path in root.paths:
+            if other_path == path:
+                continue
+            last_step = other_path[-1]
+            last_coords = [element[1] for element in last_step]
+            for element in last_coords:
+                if element in cells:
+                    goal_conflict_rank[worker] += 1
+    
     while open_set:
         iterations += 1
         filtered_set = [p for p in open_set if p not in closed_set]
@@ -102,9 +118,10 @@ def CBS(initial_states):
         open_set.remove(P)
         closed_set.add(P)
 
-        print("#Opening node with cost", P.cost, "agent", P.agent, \
-            "explored nodes", len(closed_set), "frontier size", len(filtered_set), "Longest path:", len(P.paths[0]), flush=True)
-        
+        print("#Opening node cost", P.cost, "agent", P.agent, \
+            "explored", len(closed_set), "frontier", len(filtered_set), flush=True)
+
+
         for path in P.paths:
             C = validate(path, P.paths) # Consistent path needs to be valid
             if C is not None:   # Found conflict, path invalid, non goal node
@@ -139,7 +156,7 @@ def CBS(initial_states):
 
                 # Replan
                 
-                plan_i, path_i, priority = A.get_single_search(agent_i)
+                plan_i, path_i = A.get_single_search(agent_i)
                 plan_i = plan_i[0]
                 path_i = path_i[0]
 
@@ -151,7 +168,7 @@ def CBS(initial_states):
 
                 # Get cost
                 plan_lengths = [len(plan) for plan in A.plans]
-                A.cost = (-priority_lookup[agent_i], agent_i, sum(plan_lengths), len(A.constraints))
+                A.cost = (goal_conflict_rank[agent_i], path_rank[agent_i], agent_i, sum(plan_lengths), len(A.constraints))
                 
                 #removing duplicates:
                 unique_constraints = set()
