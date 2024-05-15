@@ -178,7 +178,7 @@ class SearchClient:
         # Send client name to server.
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding='ASCII')
-        print('SearchClient', flush=True)
+        print('Flower', flush=True)
         
         # We can also print comments to stdout by prefixing with a #.
         print('#This is a comment.', flush=True)
