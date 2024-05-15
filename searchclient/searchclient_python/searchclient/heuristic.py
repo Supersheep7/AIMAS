@@ -2,6 +2,7 @@ from abc import ABCMeta
 from collections import deque
 import numpy as np
 import string   
+from itertools import chain
 from utils import manhattan
 
 class Heuristic(metaclass=ABCMeta):
@@ -13,7 +14,6 @@ class Heuristic(metaclass=ABCMeta):
         self.current_box = None
         self.alphabet = string.ascii_uppercase
         self.latest_state = initial_state
-        self.novelty_sets = []                             # We assume PDDL tuples
 
         def get_neighbors(grid, pos):
             
@@ -78,6 +78,15 @@ class Heuristic(metaclass=ABCMeta):
                 self.grids[unique_goal_id] = get_path(self.wall_matrix, goal_pos)
             else:
                 self.grids[goal_name] = get_path(self.wall_matrix, goal_pos)
+
+    def pathfinding(self, state):
+
+        count = 0
+        agent_pos = (state.agent_rows[0], state.agent_cols[0])
+        grid = self.grids[state.worker_name]
+        count += grid[agent_pos]
+
+        return count
     
 
     def h(self, state: 'State') -> 'int':
@@ -91,51 +100,51 @@ class Heuristic(metaclass=ABCMeta):
         # Default to boxes
         if any(isinstance(key, str) for key in self.grids.keys()):
             boxes = []
-            grids = []
             for x, row in enumerate(state.boxes):
                 for y, box in enumerate(row):
                     # Filters empty tiles and unassigned boxes
-                    if box != '' and any(key.startswith(box) for key in self.grids.keys()):
+                    if box != '' and any(str(key).startswith(box) for key in self.grids.keys()):
                         box_pos = (x, y)
                         boxes.append((box, box_pos))
             boxes = sorted(boxes, key=lambda box: box[0])
-            for key, grid in self.grids.items():
-                grids.append(grid)  
+            grids = [grid for key, grid in self.grids.items() if type(key) is not int]
             # Loop through boxes and grids, alphabetically. Assigns each box to its grid, so it works also when they are not specifically labeled
             for box, grid in zip(boxes, grids):
                 grid = np.array(grid)
                 ''' If we want to add nearest box heuristic in the mix '''
                 count0 += grid[box[1][0]][box[1][1]]
-                count1 += manhattan((box[1][0], box[1][1]), (state.agent_rows[0], state.agent_cols[0]))
+                manhattan_distance = manhattan((box[1][0], box[1][1]), (state.agent_rows[0], state.agent_cols[0]))
+                count1 += manhattan_distance
+
+            if count0 == 0:
+                count = int(self.pathfinding(state))
+                return count
 
             return (count0, count1)
 
         # Default to pathfinding
         else:
-            agents = []
-            for agent_row in state.agent_rows:
-                agent_num = state.worker_name
-                agent_col = state.agent_cols[0]
-                agent_pos = (agent_row, agent_col)
-                if agent_num in self.grids:
-                    grid = self.grids[agent_num]
-                    count += grid[agent_pos]
-                    # agents.append(grid[agent_pos])
-                    # count = max(agents)
-                else: 
-                    count += manhattan(agent_pos, (agent_num, agent_num))
-
-            return int(count)
+            self.pathfinding(state)
 
     def get_w(self, explored, state: 'State') -> 'int':
 
+        ''' experimenting with this, pay no mind to the comments '''
         state_repr = state.atoms
+        # explored_atom_form = list(chain.from_iterable(explored))
 
-        if state_repr not in explored:        # If one atom is novel
-            state.w = 0
+        if state_repr not in explored:
+            state.r = 0
 
-        else:
-            state.w = explored.count(state_repr)
+        else: 
+            state.r = explored.count(state_repr)
+
+        # for atom in state_repr:
+        #     if atom not in explored_atom_form:        # If one atom is novel
+        #         state.w = 0
+        #         break
+
+        #     else:
+        #         state.w = explored_atom_form.count(atom)
 
         return
 
@@ -148,9 +157,11 @@ class HeuristicBFWS(Heuristic):
     def f(self, state: 'State') -> 'int':
         heuristic_value = self.h(state)
         if type(heuristic_value) == int:        # MAPF, we can be greedy
-            return (heuristic_value)
+            print("#mapf", flush=True)
+            return (-1/(heuristic_value+1), -1/(heuristic_value+1))
         else:
-            return ((state.w + heuristic_value[0], heuristic_value[1]))     # Boxes, incomplete, we have to add width/g to avoid loops
+            f = ((state.r + heuristic_value[0], heuristic_value[1]))
+            return f
     
     def __repr__(self):
         return 'BFWS evaluation'

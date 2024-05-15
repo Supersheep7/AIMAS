@@ -20,6 +20,7 @@ class State:
         self.constraints = constraints if constraints else []
         self.goals = goals
         self.w = 1
+        self.r = 1
         def atoms(self):
             """
             Generates a set of atoms that represent the current state.
