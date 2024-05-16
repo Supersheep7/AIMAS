@@ -25,12 +25,14 @@ class Node():
             self.plans, self.paths = self.plans_from_states(self.initial_states)     # Has to be consistent with constraints
         self.workers = [state.worker_name for state in self.initial_states]
         self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
-        print("#",len(self.workers))
 
     def plans_from_states(self, states):
 
         plans = []
         plans_repr = []
+
+        states = sorted(states, key=lambda x:x.worker_name)
+
         for state in states:
             frontier = FrontierBestFirstWidth(HeuristicBFWS(state))
             searching = search(state, frontier)
@@ -122,8 +124,6 @@ def CBS(initial_states):
         iterations += 1
         filtered_set = [p for p in open_set if p not in closed_set]
 
-        random.shuffle(filtered_set)
-
         P = min(filtered_set, key=lambda x: (x.cost))
         open_set.remove(P)
         closed_set.add(P)
@@ -145,6 +145,7 @@ def CBS(initial_states):
             else:
                 P.agents_to_rest()
                 solution = [x for x in zip(*P.plans)]
+                print(solution)
             return solution, is_single
         
         # Deal with one conflict at a time
@@ -153,7 +154,6 @@ def CBS(initial_states):
                 continue
             
             else:
-                print("#", vars(C), C)
                 A = copy.deepcopy(P)
                 A.agent = agent_i
                 
@@ -171,10 +171,10 @@ def CBS(initial_states):
                 
                 A.plans[agent_i] = plan_i
                 A.paths[agent_i] = path_i
-
+                rand = random.random()
                 # Get cost
                 plan_lengths = [len(plan) for plan in A.plans]
-                A.cost = (goal_conflict_rank[agent_i], path_rank[agent_i], agent_i ,sum(plan_lengths), len(A.constraints))
+                A.cost = (goal_conflict_rank[agent_i], path_rank[agent_i], agent_i, sum(plan_lengths), len(A.constraints), rand)
                 
                 ''' 
                 Agent with less conflicts in first plan's goal state

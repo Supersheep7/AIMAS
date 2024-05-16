@@ -1,24 +1,29 @@
 #domain
 hospital
 #levelname
-MAExample
+Flower
 #colors
-red: 0, A
-green: 1, B
+red: 0, A, E
+cyan: 1, B, F
+yellow: 2, C, G
+blue: 3, D, H
+green: 4, I
 #initial
 ++++++++++++
-+       0+ +
-+ ++++++++A+
 +          +
-+B++++++++ +
-+ +1       +
++    23    ++++++++
++   ABCD       4 I+
++   EFGH   ++++++ +
++    01    +    +++
++          +
 ++++++++++++
 #goal
 ++++++++++++
-+        +A+
-+ ++++++++ +
-+          +
-+ ++++++++ +
-+B+        +
++ B      C +
++A        D++++++++
++                 +
++	   ++++++I+
++H        E+    +++
++ G      F +
 ++++++++++++
 #end

@@ -95,6 +95,8 @@ def parse(server_messages):
         goals_to_assign = set()
         boxes_to_assign = set()
         
+        worker = sorted(workers, key=lambda x: x.name)
+
         for worker in workers:
             for row, line in enumerate(level_lines):
                 for col, c in enumerate(line):

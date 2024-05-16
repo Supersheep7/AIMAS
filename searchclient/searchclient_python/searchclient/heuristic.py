@@ -112,7 +112,11 @@ class Heuristic(metaclass=ABCMeta):
                 grid = np.array(grid)
                 ''' If we want to add nearest box heuristic in the mix '''
                 count0 += grid[box[1][0]][box[1][1]]
+                if grid[box[1][0]][box[1][1]] == 0:
+                    continue
                 manhattan_distance = manhattan((box[1][0], box[1][1]), (state.agent_rows[0], state.agent_cols[0]))
+                if manhattan_distance == 0:
+                    continue
                 count1 += manhattan_distance
 
             if count0 == 0 and not state.is_goal_state():
@@ -164,7 +168,7 @@ class HeuristicBFWS(Heuristic):
         if type(heuristic_value) == int:        # MAPF, we can be greedy
             return (-1/(heuristic_value+1), -1/(heuristic_value+1))
         else:
-            f = ((state.r + heuristic_value[0], heuristic_value[1]))
+            f = ((state.r + heuristic_value[0], heuristic_value[1], -state.r))
             return f
     
     def __repr__(self):
