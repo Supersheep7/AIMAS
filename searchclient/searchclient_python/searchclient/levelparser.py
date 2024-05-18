@@ -96,7 +96,7 @@ def parse(server_messages):
         boxes_to_assign = set()
         
         worker = sorted(workers, key=lambda x: x.name)
-
+        print("#", movable_boxes)
         for worker in workers:
             for row, line in enumerate(level_lines):
                 for col, c in enumerate(line):
@@ -108,7 +108,7 @@ def parse(server_messages):
                             c = '+'
                         else: 
                             boxes_to_assign.add((c, (row, col)))
-                    elif c == '+':
+                    if c == '+':
                         walls[row][col] = True
             
             worker.agent_rows = [row for row in worker.agent_rows if row is not None]
