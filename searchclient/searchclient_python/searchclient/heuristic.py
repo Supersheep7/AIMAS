@@ -168,7 +168,7 @@ class HeuristicBFWS(Heuristic):
         if type(heuristic_value) == int:        # MAPF, we can be greedy
             return (-1/(heuristic_value+1), -1/(heuristic_value+1))
         else:
-            f = ((state.r + heuristic_value[0], heuristic_value[1], -state.r))
+            f = ((state.r +  heuristic_value[0], heuristic_value[1], -state.r))
             return f
     
     def __repr__(self):

@@ -24,7 +24,7 @@ class Node():
                 state.constraints = [constraint for constraint in self.constraints if constraint.agent == state.worker_name]
             self.plans, self.paths = self.plans_from_states(self.initial_states)     # Has to be consistent with constraints
         self.workers = [state.worker_name for state in self.initial_states]
-        self.cost = sum([len(plan) for plan in self.plans]) # sum of costs
+        self.cost = 0 # sum of costs
 
     def plans_from_states(self, states):
 
@@ -176,13 +176,12 @@ def CBS(initial_states):
                 
                 A.plans[agent_i] = plan_i
                 A.paths[agent_i] = path_i
-                rand = random.random()
                 # Get cost
                 plan_lengths = [len(plan) for plan in A.plans]
-                penalty = 0
+                penalty = 1
                 if agent_i in agents_ok:
-                    penalty = 100
-                A.cost = (penalty, goal_conflict_rank[agent_i], path_rank[agent_i],  sum(plan_lengths)* agent_i, len(A.constraints), rand)
+                    penalty = len(agents_ok)/2
+                A.cost = (penalty / iterations, goal_conflict_rank[agent_i], path_rank[agent_i],  sum(plan_lengths)* agent_i, len(A.constraints))
                 
                 ''' 
                 Agent with less conflicts in first plan's goal state
