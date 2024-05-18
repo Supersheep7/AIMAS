@@ -16,8 +16,6 @@ def search(initial_state, frontier):
 
         while True:
             iterations += 1
-            if iterations % 1000 == 0:
-                print_search_status(frontier.explored, frontier)
 
             if memory.get_usage() > memory.max_usage:
                 print_search_status(frontier.explored, frontier)

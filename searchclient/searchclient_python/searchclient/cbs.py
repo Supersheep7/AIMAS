@@ -97,6 +97,7 @@ def CBS(initial_states):
     path_rank = {}
     goal_conflict_rank = {} 
     C = None
+    agents_ok = set()
 
     ''' Prepare lookup tables for agent rank '''
 
@@ -131,8 +132,12 @@ def CBS(initial_states):
         print("#Opening node cost", P.cost, "agent", P.agent, \
             "explored", len(closed_set), "frontier", len(filtered_set), flush=True)
 
-        for path in P.paths:
+        # P.paths = [ [ ] [ ] [ ] ]
+
+        for agent_i, path in enumerate(P.paths):
             C = validate(path, P.paths) # Consistent path needs to be valid
+            if C is None:
+                agents_ok.add(agent_i)
             if C is not None:   # Found conflict, path invalid, non goal node
                 break
 
@@ -145,7 +150,7 @@ def CBS(initial_states):
             else:
                 P.agents_to_rest()
                 solution = [x for x in zip(*P.plans)]
-                print(solution)
+                # print(solution)
             return solution, is_single
         
         # Deal with one conflict at a time
@@ -174,7 +179,10 @@ def CBS(initial_states):
                 rand = random.random()
                 # Get cost
                 plan_lengths = [len(plan) for plan in A.plans]
-                A.cost = (goal_conflict_rank[agent_i], path_rank[agent_i], agent_i, sum(plan_lengths), len(A.constraints), rand)
+                penalty = 0
+                if agent_i in agents_ok:
+                    penalty = 100
+                A.cost = (penalty, goal_conflict_rank[agent_i], path_rank[agent_i],  sum(plan_lengths)* agent_i, len(A.constraints), rand)
                 
                 ''' 
                 Agent with less conflicts in first plan's goal state
